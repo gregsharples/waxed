@@ -1,17 +1,34 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { COLORS } from '@/constants/Colors';
-import { TYPOGRAPHY } from '@/constants/Typography';
-import { ProfileStat } from '@/components/profile/ProfileStat';
-import { AchievementCard } from '@/components/profile/AchievementCard';
-import { MOCK_USER, MOCK_ACHIEVEMENTS } from '@/data/mockData';
-import { Settings, Award, LogOut } from 'lucide-react-native';
+import { AchievementCard } from "@/components/profile/AchievementCard";
+import { ProfileStat } from "@/components/profile/ProfileStat";
+import { COLORS } from "@/constants/Colors";
+import { TYPOGRAPHY } from "@/constants/Typography";
+import { MOCK_ACHIEVEMENTS, MOCK_USER } from "@/data/mockData";
+import { supabase } from "@/lib/supabase";
+import { Award, LogOut, Settings } from "lucide-react-native";
+import React from "react";
+import {
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      Alert.alert("Error logging out", error.message);
+    }
+    // Optionally, navigate the user away from the profile screen or to a login screen
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
@@ -28,19 +45,30 @@ export default function ProfileScreen() {
                 style={styles.profileImage}
               />
             </View>
-            <Text style={styles.profileName}>{MOCK_USER.firstName} {MOCK_USER.lastName}</Text>
+            <Text style={styles.profileName}>
+              {MOCK_USER.firstName} {MOCK_USER.lastName}
+            </Text>
             <Text style={styles.profileBio}>{MOCK_USER.bio}</Text>
-            
+
             <View style={styles.levelBadge}>
               <Text style={styles.levelText}>Level {MOCK_USER.level}</Text>
             </View>
 
             <View style={styles.statsContainer}>
-              <ProfileStat label="Sessions" value={MOCK_USER.totalSessions.toString()} />
+              <ProfileStat
+                label="Sessions"
+                value={MOCK_USER.totalSessions.toString()}
+              />
               <View style={styles.statDivider} />
-              <ProfileStat label="Hours" value={MOCK_USER.totalHours.toString()} />
+              <ProfileStat
+                label="Hours"
+                value={MOCK_USER.totalHours.toString()}
+              />
               <View style={styles.statDivider} />
-              <ProfileStat label="Skills" value={`${MOCK_USER.skillsMastered}/${MOCK_USER.totalSkills}`} />
+              <ProfileStat
+                label="Skills"
+                value={`${MOCK_USER.skillsMastered}/${MOCK_USER.totalSkills}`}
+              />
             </View>
           </View>
         </Animated.View>
@@ -51,16 +79,16 @@ export default function ProfileScreen() {
               <Award color={COLORS.accent[600]} size={20} />
               <Text style={styles.sectionTitle}>Achievements</Text>
             </View>
-            
-            <ScrollView 
-              horizontal 
+
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.achievementsContainer}
             >
               {MOCK_ACHIEVEMENTS.map((achievement, index) => (
-                <AchievementCard 
-                  key={achievement.id} 
-                  achievement={achievement} 
+                <AchievementCard
+                  key={achievement.id}
+                  achievement={achievement}
                   delay={index * 100}
                 />
               ))}
@@ -74,7 +102,9 @@ export default function ProfileScreen() {
               <Text style={styles.settingsOptionText}>Edit Profile</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.settingsOption}>
-              <Text style={styles.settingsOptionText}>Notification Settings</Text>
+              <Text style={styles.settingsOptionText}>
+                Notification Settings
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.settingsOption}>
               <Text style={styles.settingsOptionText}>App Settings</Text>
@@ -82,7 +112,10 @@ export default function ProfileScreen() {
             <TouchableOpacity style={styles.settingsOption}>
               <Text style={styles.settingsOptionText}>Help & Support</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.settingsOption, styles.logoutOption]}>
+            <TouchableOpacity
+              style={[styles.settingsOption, styles.logoutOption]}
+              onPress={handleLogout}
+            >
               <LogOut color={COLORS.error[600]} size={20} />
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
@@ -99,9 +132,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
@@ -114,7 +147,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   profileContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 24,
   },
@@ -124,13 +157,13 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 3,
     borderColor: COLORS.primary[500],
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 16,
   },
   profileImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   profileName: {
     ...TYPOGRAPHY.h2,
@@ -140,7 +173,7 @@ const styles = StyleSheet.create({
   profileBio: {
     ...TYPOGRAPHY.body,
     color: COLORS.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 16,
   },
   levelBadge: {
@@ -152,16 +185,16 @@ const styles = StyleSheet.create({
   },
   levelText: {
     ...TYPOGRAPHY.buttonText,
-    color: 'white',
+    color: "white",
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    backgroundColor: 'white',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    backgroundColor: "white",
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -169,7 +202,7 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    height: '100%',
+    height: "100%",
     backgroundColor: COLORS.neutral[200],
   },
   section: {
@@ -177,8 +210,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
@@ -193,10 +226,10 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginHorizontal: 16,
     marginBottom: 100,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 16,
     padding: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -213,8 +246,8 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
   },
   logoutOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderBottomWidth: 0,
   },
   logoutText: {
