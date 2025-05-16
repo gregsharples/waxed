@@ -1,75 +1,210 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { COLORS } from '@/constants/Colors';
+import { TYPOGRAPHY } from '@/constants/Typography';
+import { StatCard } from '@/components/home/StatCard';
+import { UpcomingSessionCard } from '@/components/home/UpcomingSessionCard';
+import { RecentSessionCard } from '@/components/home/RecentSessionCard';
+import { WaveProgressBar } from '@/components/common/WaveProgressBar';
+import { getGreeting } from '@/utils/helpers';
+import { MOCK_USER, MOCK_UPCOMING_SESSIONS, MOCK_RECENT_SESSIONS } from '@/data/mockData';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const scrollRef = useRef<ScrollView>(null);
+
+  const userLevel = MOCK_USER.level;
+  const userProgress = MOCK_USER.levelProgress;
+  const userName = MOCK_USER.firstName;
+  
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView 
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <Animated.View entering={FadeIn.delay(100).duration(600)}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.greeting}>{getGreeting()}, {userName}</Text>
+              <Text style={styles.subtitle}>Ready to catch some waves?</Text>
+            </View>
+            <View style={styles.profileImageContainer}>
+              <Image 
+                source={{ uri: MOCK_USER.profileImage }} 
+                style={styles.profileImage}
+              />
+            </View>
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+          <View style={styles.levelContainer}>
+            <View style={styles.levelTextContainer}>
+              <Text style={styles.levelLabel}>Current Level</Text>
+              <Text style={styles.levelValue}>{userLevel}</Text>
+            </View>
+            <View style={styles.progressContainer}>
+              <WaveProgressBar progress={userProgress} />
+              <Text style={styles.progressText}>{Math.round(userProgress * 100)}% to Level {parseInt(userLevel) + 1}</Text>
+            </View>
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+          <View style={styles.statsContainer}>
+            <StatCard 
+              title="Total Sessions" 
+              value={MOCK_USER.totalSessions.toString()} 
+              icon="calendar"
+              color={COLORS.primary[500]} 
+            />
+            <StatCard 
+              title="Hours Surfed" 
+              value={MOCK_USER.totalHours.toString()} 
+              icon="clock"
+              color={COLORS.secondary[500]} 
+            />
+            <StatCard 
+              title="Skills Mastered" 
+              value={`${MOCK_USER.skillsMastered}/${MOCK_USER.totalSkills}`} 
+              icon="award"
+              color={COLORS.accent[500]} 
+            />
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(400).duration(600)}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.upcomingSessionsContainer}
+          >
+            {MOCK_UPCOMING_SESSIONS.map((session, index) => (
+              <UpcomingSessionCard key={session.id} session={session} index={index} />
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(500).duration(600)}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Sessions</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {MOCK_RECENT_SESSIONS.map((session, index) => (
+            <RecentSessionCard key={session.id} session={session} />
+          ))}
+        </Animated.View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    marginTop: 16,
+    marginBottom: 24,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  greeting: {
+    ...TYPOGRAPHY.h1,
+    color: COLORS.text.primary,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text.secondary,
+    marginTop: 4,
+  },
+  profileImageContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+    backgroundColor: COLORS.neutral[100],
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  levelContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  levelTextContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  levelLabel: {
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text.secondary,
+  },
+  levelValue: {
+    ...TYPOGRAPHY.h2,
+    color: COLORS.primary[600],
+  },
+  progressContainer: {
+    marginTop: 8,
+  },
+  progressText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text.primary,
+  },
+  seeAllText: {
+    ...TYPOGRAPHY.buttonText,
+    color: COLORS.primary[600],
+  },
+  upcomingSessionsContainer: {
+    paddingBottom: 8,
   },
 });
