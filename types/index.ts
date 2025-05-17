@@ -1,64 +1,94 @@
+export interface User {
+  id: string;
+  email?: string;
+  // Add other user-related fields as needed
+}
+
 export interface Session {
   id: string;
-  date: string;
-  location: string;
-  duration: number;
-  waveHeight: number;
-  windSpeed: number;
-  temperature: number;
-  notes?: string;
-  rating: number;
+  userId: string;
+  date: string; // ISO string
+  time: string; // HH:MM
+  duration: number; // in minutes
+  location: string; // or a more complex Location object
+  spotName?: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
+  overallRating?: number; // e.g., 1-5 stars
+  waveCount?: number;
+  // Add other session-related fields
+  board?: string; // Name or ID of the board used
+  wetsuit?: string; // Thickness or type
+  media?: MediaItem[];
+  waveHeight?: WaveHeightOption;
+  waveQuality?: WaveQualityOption;
+  crowd?: CrowdOption;
 }
 
-export interface SkillCategory {
+export interface CrowdOption {
   id: string;
-  name: string;
-  description: string;
-  totalSkills: number;
-  completedSkills: number;
-  icon: string;
-  color: string;
+  label: string;
+  iconName: string; // To store the name of the lucide icon (if used for a button UI)
+  imageUri: string; // Added for ImageCarouselPicker
 }
 
-export interface Skill {
+export interface MediaItem {
   id: string;
-  name: string;
-  description: string;
-  categoryId: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  completed: boolean;
-}
-
-export interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail: string;
-  duration: string;
-  categories: string[];
-  instructor: string;
-  videoUrl: string;
+  type: "image" | "video";
+  uri: string; // local or remote URI
+  thumbnailUri?: string; // for videos
 }
 
 export interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: string;
-  dateEarned: string;
+  achieved: boolean;
+  dateAchieved?: string; // ISO string
+  iconName?: string; // For an icon library
 }
 
-export interface User {
+export interface Skill {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  profileImage: string;
-  bio: string;
-  level: string;
-  levelProgress: number;
-  totalSessions: number;
-  totalHours: number;
-  skillsMastered: number;
-  totalSkills: number;
+  name: string;
+  category: string;
+  currentLevel: number;
+  maxLevel: number;
+  description?: string;
+  // lastPracticed?: string; // ISO string
+}
+
+export interface Lesson {
+  id: string;
+  title: string;
+  category: string; // e.g., 'Beginner', 'Turns', 'Barrels'
+  duration: string; // e.g., '15 min'
+  contentUrl: string; // Link to video or article
+  isCompleted: boolean;
+  thumbnailUrl?: string;
+  description?: string;
+}
+
+export interface LocationSuggestion {
+  id: string; // Could be place_id from Google Places or similar
+  name: string; // Main text (e.g., "Fistral Beach")
+  description: string; // Secondary text (e.g., "Newquay, Cornwall, UK")
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface WaveHeightOption {
+  id: string;
+  label: string; // e.g., "Ankle Biters"
+  metric: string; // e.g., "< 0.3m"
+  imageUri: string; // Placeholder: "placeholder_wave_ankle_biters.png"
+  description?: string; // Optional detailed description
+}
+
+export interface WaveQualityOption {
+  id: string;
+  label: string; // e.g., "Blown Out"
+  description: string; // e.g., "Total mess — strong wind, no shape"
+  imageUri: string; // Placeholder: "placeholder_quality_blown_out.png"
 }

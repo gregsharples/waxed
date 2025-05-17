@@ -1,19 +1,15 @@
+import { ConditionsPicker } from "@/components/session/ConditionsPicker"; // Import ConditionsPicker
 import { LocationPicker } from "@/components/session/LocationPicker";
 import { MediaPicker } from "@/components/session/MediaPicker";
 import { COLORS } from "@/constants/Colors";
 import { TYPOGRAPHY } from "@/constants/Typography";
+import { CrowdOption, WaveHeightOption, WaveQualityOption } from "@/types"; // Import types
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import Slider from "@react-native-community/slider"; // Will be removed from duration picker
+// import Slider from "@react-native-community/slider"; // No longer needed for wave height
 import { Picker } from "@react-native-picker/picker";
-import {
-  CalendarDays,
-  Clock,
-  Droplet,
-  MapPin,
-  Star,
-} from "lucide-react-native";
+import { CalendarDays, Clock, MapPin, Star } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Modal,
@@ -42,7 +38,16 @@ export default function LogSessionScreen() {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [showLocationPickerSheet, setShowLocationPickerSheet] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState(""); // For location picker sheet
-  const [waveHeight, setWaveHeight] = useState(0.5);
+  // const [waveHeight, setWaveHeight] = useState(0.5); // Old wave height state
+  const [selectedWaveHeight, setSelectedWaveHeight] = useState<
+    WaveHeightOption | undefined
+  >(undefined);
+  const [selectedWaveQuality, setSelectedWaveQuality] = useState<
+    WaveQualityOption | undefined
+  >(undefined);
+  const [selectedCrowd, setSelectedCrowd] = useState<CrowdOption | undefined>(
+    undefined
+  ); // Added crowd state
   const [notes, setNotes] = useState("");
   const [rating, setRating] = useState(0);
   const [media, setMedia] = useState<
@@ -122,7 +127,9 @@ export default function LogSessionScreen() {
       date,
       duration,
       selectedLocation,
-      waveHeight,
+      waveHeight: selectedWaveHeight, // Updated
+      waveQuality: selectedWaveQuality, // Added
+      crowd: selectedCrowd, // Added crowd
       notes,
       rating,
       media,
@@ -361,29 +368,16 @@ export default function LogSessionScreen() {
         {/* LocationPicker component is now inside a modal/sheet triggered from Session Details card */}
         {/* The old "Where did you surf?" card has been removed */}
 
+        {/* Conditions Picker */}
         <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Droplet size={20} color={COLORS.primary[600]} />
-              <Text style={styles.cardTitle}>Conditions</Text>
-            </View>
-
-            <View style={styles.conditionItem}>
-              <Text style={styles.label}>Wave Height</Text>
-              <Text style={styles.value}>{waveHeight.toFixed(1)}m</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={0.1}
-                maximumValue={3}
-                step={0.1}
-                value={waveHeight}
-                onValueChange={setWaveHeight}
-                minimumTrackTintColor={COLORS.secondary[500]}
-                maximumTrackTintColor={COLORS.neutral[200]}
-                thumbTintColor={COLORS.secondary[600]}
-              />
-            </View>
-          </View>
+          <ConditionsPicker
+            selectedWaveHeight={selectedWaveHeight}
+            onWaveHeightChange={setSelectedWaveHeight}
+            selectedWaveQuality={selectedWaveQuality}
+            onWaveQualityChange={setSelectedWaveQuality}
+            selectedCrowd={selectedCrowd}
+            onCrowdChange={setSelectedCrowd}
+          />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).duration(500)}>

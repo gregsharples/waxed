@@ -1,16 +1,18 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS } from '@/constants/Colors';
-import { TYPOGRAPHY } from '@/constants/Typography';
-import { MapPin, CalendarDays } from 'lucide-react-native';
-import { formatDate } from '@/utils/helpers';
-import { Session } from '@/types';
+import { COLORS } from "@/constants/Colors";
+import { TYPOGRAPHY } from "@/constants/Typography";
+import { Session } from "@/types";
+import { formatDate } from "@/utils/helpers";
+import { CalendarDays, MapPin } from "lucide-react-native";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface RecentSessionCardProps {
   session: Session;
 }
 
-export const RecentSessionCard: React.FC<RecentSessionCardProps> = ({ session }) => {
+export const RecentSessionCard: React.FC<RecentSessionCardProps> = ({
+  session,
+}) => {
   // Function to determine star color based on rating
   const getStarColor = (rating: number, starPosition: number) => {
     if (starPosition <= rating) {
@@ -40,23 +42,29 @@ export const RecentSessionCard: React.FC<RecentSessionCardProps> = ({ session })
           <Text style={styles.statValue}>{session.duration}h</Text>
         </View>
         <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Wave Height</Text>
-          <Text style={styles.statValue}>{session.waveHeight}m</Text>
-        </View>
-        <View style={styles.statDivider} />
+        {session.waveHeight && (
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>Wave Height</Text>
+            <Text style={styles.statValue}>{session.waveHeight.label}</Text>
+          </View>
+        )}
+        {/* Wind speed removed from Session type, add back if needed */}
+        {/* <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>Wind</Text>
           <Text style={styles.statValue}>{session.windSpeed}km/h</Text>
-        </View>
+        </View> */}
       </View>
 
       <View style={styles.footer}>
         <View style={styles.ratingContainer}>
           {[1, 2, 3, 4, 5].map((star) => (
-            <Text 
-              key={star} 
-              style={[styles.starIcon, { color: getStarColor(session.rating, star) }]}
+            <Text
+              key={star}
+              style={[
+                styles.starIcon,
+                { color: getStarColor(session.overallRating || 0, star) },
+              ]}
             >
               ★
             </Text>
@@ -72,24 +80,24 @@ export const RecentSessionCard: React.FC<RecentSessionCardProps> = ({ session })
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   location: {
     ...TYPOGRAPHY.subtitle,
@@ -97,8 +105,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   date: {
     ...TYPOGRAPHY.caption,
@@ -106,15 +114,15 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingVertical: 12,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: COLORS.neutral[100],
   },
   statItem: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
   },
   statLabel: {
@@ -128,24 +136,24 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    height: '100%',
+    height: "100%",
     backgroundColor: COLORS.neutral[100],
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 12,
   },
   ratingContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   starIcon: {
     fontSize: 18,
     marginRight: 2,
   },
   detailsButton: {
-    backgroundColor: COLORS.primary[50],
+    backgroundColor: COLORS.primary[100],
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,

@@ -13,7 +13,6 @@ import { getGreeting } from "@/utils/helpers";
 import React, { useRef } from "react";
 import {
   Dimensions,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,9 +27,12 @@ const { width } = Dimensions.get("window");
 export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
-  const userLevel = MOCK_USER.level;
-  const userProgress = MOCK_USER.levelProgress;
-  const userName = MOCK_USER.firstName;
+  // const userLevel = MOCK_USER.level;
+  // const userProgress = MOCK_USER.levelProgress;
+  // const userName = MOCK_USER.firstName;
+  const userLevel = "1"; // Placeholder
+  const userProgress = 0.5; // Placeholder
+  const userName = MOCK_USER.email ? MOCK_USER.email.split("@")[0] : "Surfer"; // Use email part or generic
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -47,12 +49,12 @@ export default function HomeScreen() {
               </Text>
               <Text style={styles.subtitle}>Ready to catch some waves?</Text>
             </View>
-            <View style={styles.profileImageContainer}>
+            {/* <View style={styles.profileImageContainer}>
               <Image
                 source={{ uri: MOCK_USER.profileImage }}
                 style={styles.profileImage}
               />
-            </View>
+            </View> */}
           </View>
         </Animated.View>
 
@@ -76,19 +78,22 @@ export default function HomeScreen() {
           <View style={styles.statsContainer}>
             <StatCard
               title="Total Sessions"
-              value={MOCK_USER.totalSessions.toString()}
+              // value={MOCK_USER.totalSessions.toString()}
+              value={"0"}
               icon="calendar"
               color={COLORS.primary[500]}
             />
             <StatCard
               title="Hours Surfed"
-              value={MOCK_USER.totalHours.toString()}
+              // value={MOCK_USER.totalHours.toString()}
+              value={"0"}
               icon="clock"
               color={COLORS.secondary[500]}
             />
             <StatCard
               title="Skills Mastered"
-              value={`${MOCK_USER.skillsMastered}/${MOCK_USER.totalSkills}`}
+              // value={`${MOCK_USER.skillsMastered}/${MOCK_USER.totalSkills}`}
+              value={"0/0"}
               icon="award"
               color={COLORS.accent[500]}
             />

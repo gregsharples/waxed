@@ -8,7 +8,6 @@ import { Award, LogOut, Settings } from "lucide-react-native";
 import React from "react";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -39,35 +38,39 @@ export default function ProfileScreen() {
 
         <Animated.View entering={FadeIn.delay(200).duration(600)}>
           <View style={styles.profileContainer}>
-            <View style={styles.profileImageContainer}>
+            {/* <View style={styles.profileImageContainer}>
               <Image
                 source={{ uri: MOCK_USER.profileImage }}
                 style={styles.profileImage}
               />
-            </View>
+            </View> */}
             <Text style={styles.profileName}>
-              {MOCK_USER.firstName} {MOCK_USER.lastName}
+              {/* {MOCK_USER.firstName} {MOCK_USER.lastName} */}
+              {MOCK_USER.email || "User Name"}
             </Text>
-            <Text style={styles.profileBio}>{MOCK_USER.bio}</Text>
+            {/* <Text style={styles.profileBio}>{MOCK_USER.bio}</Text> */}
 
-            <View style={styles.levelBadge}>
+            {/* <View style={styles.levelBadge}>
               <Text style={styles.levelText}>Level {MOCK_USER.level}</Text>
-            </View>
+            </View> */}
 
             <View style={styles.statsContainer}>
               <ProfileStat
                 label="Sessions"
-                value={MOCK_USER.totalSessions.toString()}
+                // value={MOCK_USER.totalSessions.toString()}
+                value={"0"}
               />
               <View style={styles.statDivider} />
               <ProfileStat
                 label="Hours"
-                value={MOCK_USER.totalHours.toString()}
+                // value={MOCK_USER.totalHours.toString()}
+                value={"0"}
               />
               <View style={styles.statDivider} />
               <ProfileStat
                 label="Skills"
-                value={`${MOCK_USER.skillsMastered}/${MOCK_USER.totalSkills}`}
+                // value={`${MOCK_USER.skillsMastered}/${MOCK_USER.totalSkills}`}
+                value={"0/0"}
               />
             </View>
           </View>
