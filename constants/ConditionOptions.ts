@@ -56,37 +56,37 @@ export const WAVE_QUALITY_OPTIONS: WaveQualityOption[] = [
     id: "wq1",
     label: "Blown Out",
     description: "Total mess — strong wind, no shape",
-    imageUri: require("@/assets/images/conditions/wave-quality-wq1.png"),
+    imageUri: require("@/assets/images/conditions/wave-quality-wq1.jpg"),
   },
   {
     id: "wq2",
     label: "Choppy",
     description: "Disorganized, short-period, windy",
-    imageUri: require("@/assets/images/conditions/wave-quality-wq2.png"),
+    imageUri: require("@/assets/images/conditions/wave-quality-wq2.jpg"),
   },
   {
     id: "wq3",
     label: "Bumpy",
     description: "Rideable but uneven",
-    imageUri: require("@/assets/images/conditions/wave-quality-wq3.png"),
+    imageUri: require("@/assets/images/conditions/wave-quality-wq3.jpg"),
   },
   {
     id: "wq4",
     label: "Fair",
     description: "Decent shape, a bit soft or inconsistent",
-    imageUri: require("@/assets/images/conditions/wave-quality-wq4.png"),
+    imageUri: require("@/assets/images/conditions/wave-quality-wq4.jpg"),
   },
   {
     id: "wq5",
     label: "Clean",
     description: "Well-formed, consistent lines",
-    imageUri: require("@/assets/images/conditions/wave-quality-wq5.png"),
+    imageUri: require("@/assets/images/conditions/wave-quality-wq5.jpg"),
   },
   {
     id: "wq6",
     label: "Glassy",
     description: "Dream conditions, silky smooth surface",
-    imageUri: require("@/assets/images/conditions/wave-quality-wq6.png"),
+    imageUri: require("@/assets/images/conditions/wave-quality-wq6.jpg"),
   },
 ];
 
@@ -95,13 +95,13 @@ export const CROWD_OPTIONS: CrowdOption[] = [
     id: "c1",
     label: "Empty",
     iconName: "Smile", // Retaining iconName in case it's useful for other UI later
-    imageUri: require("@/assets/images/conditions/crowd-level-c1.png"),
+    imageUri: require("@/assets/images/conditions/crowd-level-c1.jpg"),
   },
   {
     id: "c2",
     label: "A few surfers",
     iconName: "User",
-    imageUri: require("@/assets/images/conditions/crowd-level-c2.png"),
+    imageUri: require("@/assets/images/conditions/crowd-level-c2.jpg"),
   },
   {
     id: "c3",
@@ -113,12 +113,12 @@ export const CROWD_OPTIONS: CrowdOption[] = [
     id: "c4",
     label: "Busy",
     iconName: "Users",
-    imageUri: require("@/assets/images/conditions/crowd-level-c4.png"),
+    imageUri: require("@/assets/images/conditions/crowd-level-c4.jpg"),
   },
   {
     id: "c5",
     label: "Hectic",
     iconName: "Frown",
-    imageUri: require("@/assets/images/conditions/crowd-level-c5.png"),
+    imageUri: require("@/assets/images/conditions/crowd-level-c5.jpg"),
   },
 ];
