@@ -7,12 +7,14 @@ import {
   Trash2,
   Trash2 as TrashIconViewer,
   Video,
+  X,
   XCircle,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  Alert,
-  Image as RNImage, // Renamed to avoid conflict if Image from react-native-image-viewing is used directly
+  Alert, // Renamed to avoid conflict if Image from react-native-image-viewing is used directly
+  Platform,
+  Image as RNImage, // Added Platform import
   ScrollView,
   StyleSheet,
   Text,
@@ -20,13 +22,17 @@ import {
   View,
 } from "react-native";
 import ImageViewing from "react-native-image-viewing";
+import { MediaViewerModal } from "./MediaViewerModal"; // Import the custom modal
+
+interface MediaItemForPicker {
+  // Renaming to avoid conflict with MediaItem in Modal
+  uri: string;
+  type: "image" | "video";
+  thumbnailUri?: string;
+}
 
 interface MediaPickerProps {
-  media: {
-    uri: string;
-    type: "image" | "video";
-    thumbnailUri?: string;
-  }[];
+  media: MediaItemForPicker[];
   onAddMedia: (media: {
     uri: string;
     type: "image" | "video";
@@ -42,39 +48,52 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
 }) => {
   const [isSelectModeActive, setIsSelectModeActive] = useState(false);
   const [selectedItemUris, setSelectedItemUris] = useState<string[]>([]);
+
+  // For react-native-image-viewing (images only)
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
 
-  const imagesForViewer = media
+  // For custom MediaViewerModal (videos, and potentially images if preferred later)
+  const [viewingMediaItem, setViewingMediaItem] =
+    useState<MediaItemForPicker | null>(null);
+  const [isCustomViewerVisible, setIsCustomViewerVisible] = useState(false);
+
+  const imagesForImageViewing = media
     .filter((item) => item.type === "image")
     .map((item) => ({ uri: item.uri }));
 
   const handleItemLongPress = (uri: string) => {
-    if (isImageViewerVisible) return; // Don't activate select mode if viewer is open
+    if (isImageViewerVisible || isCustomViewerVisible) return;
     setIsSelectModeActive(true);
     setSelectedItemUris((prevUris) =>
       prevUris.includes(uri) ? prevUris : [...prevUris, uri]
     );
   };
 
-  const handleItemPress = (uri: string, type: "image" | "video") => {
+  const handleItemPress = (item: MediaItemForPicker) => {
     if (isSelectModeActive) {
       setSelectedItemUris((prevUris) =>
-        prevUris.includes(uri)
-          ? prevUris.filter((itemUri) => itemUri !== uri)
-          : [...prevUris, uri]
+        prevUris.includes(item.uri)
+          ? prevUris.filter((itemUri) => itemUri !== item.uri)
+          : [...prevUris, item.uri]
       );
     } else {
-      // Open media viewer
-      if (type === "image") {
-        const imageIndex = imagesForViewer.findIndex((img) => img.uri === uri);
+      if (item.type === "image") {
+        const imageIndex = imagesForImageViewing.findIndex(
+          (img) => img.uri === item.uri
+        );
         if (imageIndex !== -1) {
           setCurrentImageIndex(imageIndex);
           setIsImageViewerVisible(true);
+          // Ensure other viewer is closed
+          setIsCustomViewerVisible(false);
+          setViewingMediaItem(null);
         }
-      } else {
-        // TODO: Handle video viewing
-        console.log("View video (not implemented yet):", uri);
+      } else if (item.type === "video") {
+        setViewingMediaItem(item);
+        setIsCustomViewerVisible(true);
+        // Ensure other viewer is closed
+        setIsImageViewerVisible(false);
       }
     }
   };
@@ -294,6 +313,7 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
           </Text>
         </TouchableOpacity>
         {media.map((item) => {
+          // item is MediaItemForPicker here
           const isSelected = selectedItemUris.includes(item.uri);
           return (
             <TouchableOpacity
@@ -302,7 +322,7 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
                 styles.mediaItemContainer,
                 isSelected && styles.mediaItemSelected,
               ]}
-              onPress={() => handleItemPress(item.uri, item.type)}
+              onPress={() => handleItemPress(item)}
               onLongPress={() => handleItemLongPress(item.uri)}
               delayLongPress={200}
             >
@@ -339,31 +359,54 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
           );
         })}
       </ScrollView>
-      {imagesForViewer.length > 0 && (
-        <ImageViewing
-          images={imagesForViewer}
-          imageIndex={currentImageIndex}
-          visible={isImageViewerVisible}
-          onRequestClose={() => setIsImageViewerVisible(false)}
-          doubleTapToZoomEnabled
-          swipeToCloseEnabled
-          FooterComponent={({ imageIndex }) => (
-            <View style={styles.viewerFooter}>
-              <TouchableOpacity
-                style={styles.viewerDeleteButton}
-                onPress={() => {
-                  const imageUriToDelete = imagesForViewer[imageIndex]?.uri;
-                  if (imageUriToDelete) {
-                    onRemoveMedia(imageUriToDelete);
-                    setIsImageViewerVisible(false); // Close viewer after delete
-                  }
-                }}
-              >
-                <TrashIconViewer size={24} color={COLORS.error[500]} />
-                <Text style={styles.viewerDeleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+      {isImageViewerVisible &&
+        imagesForImageViewing.length > 0 && ( // Only render when visible
+          <ImageViewing
+            images={imagesForImageViewing} // Use the filtered list for ImageViewing
+            imageIndex={currentImageIndex}
+            visible={isImageViewerVisible}
+            onRequestClose={() => setIsImageViewerVisible(false)}
+            doubleTapToZoomEnabled
+            swipeToCloseEnabled
+            HeaderComponent={({ imageIndex }) => (
+              <View style={styles.viewerHeader}>
+                <TouchableOpacity
+                  onPress={() => setIsImageViewerVisible(false)}
+                  style={styles.viewerHeaderButton}
+                >
+                  <X size={28} color={"white"} />{" "}
+                  {/* Changed from XCircle to X */}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.viewerHeaderButton}
+                  onPress={() => {
+                    const imageUriToDelete =
+                      imagesForImageViewing[imageIndex]?.uri;
+                    if (imageUriToDelete) {
+                      onRemoveMedia(imageUriToDelete);
+                      setIsImageViewerVisible(false);
+                    }
+                  }}
+                >
+                  <TrashIconViewer size={24} color={COLORS.error[400]} />
+                </TouchableOpacity>
+              </View>
+            )}
+            // FooterComponent removed, delete is now in header
+          />
+        )}
+      {viewingMediaItem && (
+        <MediaViewerModal
+          isVisible={isCustomViewerVisible}
+          mediaItem={viewingMediaItem}
+          onClose={() => {
+            setIsCustomViewerVisible(false);
+            setViewingMediaItem(null);
+          }}
+          onRemove={(uri) => {
+            onRemoveMedia(uri);
+            // No need to setIsCustomViewerVisible(false) here, as onRemove in modal already calls onClose
+          }}
         />
       )}
     </View>
@@ -474,18 +517,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  viewerDeleteButton: {
+  // viewerDeleteButton & viewerDeleteButtonText styles are no longer needed as footer is removed
+  viewerHeader: {
+    // Styles for the new header in ImageViewing
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "android" ? 20 : 50, // Adjust for status bar
+    height: 80,
+    zIndex: 1,
+    // backgroundColor: 'rgba(0,0,0,0.3)', // Optional: slight background for header
   },
-  viewerDeleteButtonText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.error[400],
-    marginLeft: 8,
-    fontWeight: "bold",
+  viewerHeaderButton: {
+    padding: 8,
   },
 });

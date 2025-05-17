@@ -1,13 +1,13 @@
 import { COLORS } from "@/constants/Colors";
-import { TYPOGRAPHY } from "@/constants/Typography";
-import { X } from "lucide-react-native";
-import React from "react";
+import { ResizeMode, Video } from "expo-av"; // Added Video and ResizeMode from expo-av
+import { Trash2, X } from "lucide-react-native"; // Added Trash2
+import React, { useRef } from "react"; // Added useRef for video
 import {
   Image,
   Modal,
+  Platform, // Added Platform
   SafeAreaView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -22,15 +22,24 @@ interface MediaViewerModalProps {
   isVisible: boolean;
   mediaItem: MediaItem | null;
   onClose: () => void;
-  // onRemove: (uri: string) => void; // Will add later
+  onRemove: (uri: string) => void; // Added onRemove
 }
 
 export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
   isVisible,
   mediaItem,
   onClose,
-  // onRemove,
+  onRemove,
 }) => {
+  const videoRef = useRef<Video>(null);
+
+  const handleDelete = () => {
+    if (mediaItem) {
+      onRemove(mediaItem.uri);
+      onClose(); // Close modal after deletion
+    }
+  };
+
   if (!mediaItem) {
     return null;
   }
@@ -45,10 +54,15 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.modalContainer}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity onPress={onClose} style={styles.headerButton}>
               <X size={28} color={COLORS.text.primary} />
             </TouchableOpacity>
-            {/* TODO: Add Delete button here later */}
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={styles.headerButton}
+            >
+              <Trash2 size={24} color={COLORS.error[500]} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.contentContainer}>
@@ -60,19 +74,18 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
               />
             )}
             {mediaItem.type === "video" && (
-              // TODO: Implement video player using expo-av
-              <View style={styles.videoPlaceholder}>
-                <Text style={styles.videoPlaceholderText}>
-                  Video playback coming soon
-                </Text>
-                {mediaItem.thumbnailUri && (
-                  <Image
-                    source={{ uri: mediaItem.thumbnailUri }}
-                    style={styles.image}
-                    resizeMode="contain"
-                  />
-                )}
-              </View>
+              <Video
+                ref={videoRef}
+                style={styles.video}
+                source={{
+                  uri: mediaItem.uri,
+                }}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                isLooping={false} // Or true, depending on preference
+                shouldPlay={true} // Autoplay when modal opens
+                onError={(error) => console.error("Video Error:", error)}
+              />
             )}
           </View>
         </View>
@@ -84,7 +97,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.85)", // Semi-transparent background
+    backgroundColor: "black", // Changed to solid black
   },
   modalContainer: {
     flex: 1,
@@ -100,12 +113,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between", // Pushes close to left, (future delete to right)
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === "android" ? 16 : 10, // Basic status bar handling
-    height: 60, // Adjust as needed
+    paddingTop: Platform.OS === "android" ? 16 : 10,
+    height: 60,
     zIndex: 1,
   },
-  closeButton: {
-    padding: 8, // Make it easier to tap
+  headerButton: {
+    // Renamed from closeButton for clarity
+    padding: 8,
   },
   contentContainer: {
     flex: 1,
@@ -117,17 +131,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  videoPlaceholder: {
-    width: "90%",
-    height: "70%",
-    backgroundColor: COLORS.neutral[200],
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  videoPlaceholderText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.text.secondary,
-    marginBottom: 10,
+  video: {
+    // Style for the Video component
+    width: "100%",
+    height: "100%",
   },
 });
