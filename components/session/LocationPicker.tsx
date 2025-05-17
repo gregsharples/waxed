@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Region } from "react-native-maps";
 
 interface SpotData {
   id: string;
@@ -73,6 +73,10 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     useState<Location.LocationObject | null>(null);
   const [activeTab, setActiveTab] = useState<"list" | "map">("list");
   const mapViewRef = useRef<MapView>(null);
+
+  // Map viewport state
+  const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   // Hierarchical navigation state
   const [hierarchy, setHierarchy] = useState<{
@@ -513,32 +517,117 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     return () => clearTimeout(debounceTimeout);
   }, [searchQuery, currentPath, fetchHierarchyLevel]);
 
-  // Handle tab changes
-  useEffect(() => {
-    if (activeTab === "map" && visibleSpots.length === 0 && !searchQuery) {
-      // If switching to map view with no spots visible, try to fetch spots for the current level
-      const depth = currentPath.length;
-      if (depth >= 3) {
-        // We're at a region or deeper, try to fetch spots
-        const continent = currentPath[0];
-        const country = currentPath[1];
-        const region = currentPath[2];
-        const area = depth >= 4 ? currentPath[3] : undefined;
+  // This function handles loading spots within the current map viewport
+  const loadSpotsInViewport = useCallback(
+    async (region: Region) => {
+      if (!isMapReady) return;
 
-        fetchHierarchyLevel("spots", {
-          continent,
-          country,
-          region,
-          area,
-        });
+      setIsLoading(true);
+      setLoadingError(null);
+
+      try {
+        // Calculate the boundaries with some padding
+        const latDelta = region.latitudeDelta;
+        const lngDelta = region.longitudeDelta;
+
+        const minLat = region.latitude - latDelta / 2;
+        const maxLat = region.latitude + latDelta / 2;
+        const minLng = region.longitude - lngDelta / 2;
+        const maxLng = region.longitude + lngDelta / 2;
+
+        // Query spots within these boundaries
+        const { data, error } = await supabase
+          .from("spots")
+          .select("id, spot_name, latitude, longitude")
+          .gte("latitude", minLat)
+          .lte("latitude", maxLat)
+          .gte("longitude", minLng)
+          .lte("longitude", maxLng)
+          .limit(200); // Reasonable limit to prevent overloading
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const mappableSpots: MappableSpot[] = data.map((spot: any) => ({
+            name: spot.spot_name,
+            isCategory: false as const, // Use const assertion to ensure type is 'false' not 'boolean'
+            id: spot.id.toString(),
+            lat: spot.latitude,
+            lng: spot.longitude,
+          }));
+
+          setVisibleSpots(mappableSpots);
+        } else {
+          setVisibleSpots([]);
+        }
+      } catch (error) {
+        console.error("Error loading spots in viewport:", error);
+        // Only show error on map overlay if needed
+        setVisibleSpots([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isMapReady]
+  );
+
+  // Add debouncing to prevent excessive API calls
+  const handleRegionChangeComplete = useCallback((region: Region) => {
+    setCurrentRegion(region);
+    // We won't call loadSpotsInViewport directly, instead rely on the effect
+  }, []);
+
+  // Separate the API call with debouncing to prevent excessive refreshes
+  useEffect(() => {
+    if (!currentRegion) return;
+
+    const timer = setTimeout(() => {
+      loadSpotsInViewport(currentRegion);
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(timer);
+  }, [currentRegion, loadSpotsInViewport]);
+
+  // When switching to map tab, center on selected spot or user's location
+  useEffect(() => {
+    if (activeTab === "map" && mapViewRef.current && isMapReady) {
+      // If a spot is selected, center on it
+      const selectedSpot = visibleSpots.find(
+        (spot) => spot.name === selectedLocation
+      );
+
+      if (selectedSpot) {
+        mapViewRef.current.animateToRegion(
+          {
+            latitude: selectedSpot.lat,
+            longitude: selectedSpot.lng,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          },
+          500
+        );
+      } else if (currentRegion) {
+        // Already have a region, keep it
+      } else if (currentUserLocation) {
+        // Fall back to user location
+        mapViewRef.current.animateToRegion(
+          {
+            latitude: currentUserLocation.coords.latitude,
+            longitude: currentUserLocation.coords.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          },
+          500
+        );
       }
     }
   }, [
     activeTab,
-    visibleSpots.length,
-    currentPath,
-    fetchHierarchyLevel,
-    searchQuery,
+    currentUserLocation,
+    selectedLocation,
+    visibleSpots,
+    currentRegion,
+    isMapReady,
   ]);
 
   const getSectionedData = (): Section[] => {
@@ -651,19 +740,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     }
 
     return (
-      <SectionList<DisplayItem, Section>
-        sections={getSectionedData()}
-        keyExtractor={(item, index) => item.name + index}
-        style={styles.listStyle}
-        renderItem={({ item }: { item: DisplayItem }) => (
-          <ListItem
-            item={item}
-            selectedItemName={selectedLocation}
-            onItemPress={handleItemPress}
-          />
-        )}
-        ListHeaderComponent={
-          currentPath.length > 0 || searchQuery ? (
+      <View style={styles.listWithHeaderContainer}>
+        {currentPath.length > 0 || searchQuery ? (
+          <View style={styles.stickyHeader}>
             <TouchableOpacity
               onPress={handleBackPress}
               style={styles.backButton}
@@ -672,45 +751,41 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                 {searchQuery ? "< Clear Search" : "< Back"}
               </Text>
             </TouchableOpacity>
-          ) : null
-        }
-        renderSectionHeader={({ section: { title } }) => (
-          <View style={styles.customSectionHeader}>
-            <Text style={styles.sectionHeader}>{title}</Text>
+
             {!searchQuery && currentPath.length > 0 && (
               <Text style={styles.breadcrumbs}>{currentPath.join(" > ")}</Text>
             )}
           </View>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.emptyListText}>
-            {searchQuery
-              ? `No results for "${searchQuery}"`
-              : displayItems.length === 0
-              ? "No locations found."
-              : ""}
-          </Text>
-        }
-      />
+        ) : null}
+
+        <SectionList<DisplayItem, Section>
+          sections={getSectionedData()}
+          keyExtractor={(item, index) => item.name + index}
+          style={styles.listStyle}
+          renderItem={({ item }: { item: DisplayItem }) => (
+            <ListItem
+              item={item}
+              selectedItemName={selectedLocation}
+              onItemPress={handleItemPress}
+            />
+          )}
+          renderSectionHeader={() => null} // No section headers, using breadcrumbs instead
+          ListEmptyComponent={
+            <Text style={styles.emptyListText}>
+              {searchQuery
+                ? `No results for "${searchQuery}"`
+                : displayItems.length === 0
+                ? "No locations found."
+                : ""}
+            </Text>
+          }
+        />
+      </View>
     );
   };
 
   return (
     <View style={styles.pickerSheetContent}>
-      <View style={styles.searchContainer}>
-        <Search
-          size={20}
-          color={COLORS.text.secondary}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search locations..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[
@@ -746,6 +821,26 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         </TouchableOpacity>
       </View>
 
+      {activeTab === "list" && (
+        <>
+          <View style={styles.searchContainer}>
+            <Search
+              size={20}
+              color={COLORS.text.secondary}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search locations..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          {listOrLoadingIndicator()}
+        </>
+      )}
+
       {activeTab === "map" && (
         <View style={styles.mapContainer}>
           <MapView
@@ -753,16 +848,21 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             style={styles.map}
             zoomEnabled={true}
             scrollEnabled={true}
+            rotateEnabled={true}
+            pitchEnabled={true}
+            toolbarEnabled={true}
             initialRegion={
               currentUserLocation
                 ? {
                     latitude: currentUserLocation.coords.latitude,
                     longitude: currentUserLocation.coords.longitude,
-                    latitudeDelta: 0.0922,
-                    longitudeDelta: 0.0421,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
                   }
                 : undefined
             }
+            onMapReady={() => setIsMapReady(true)}
+            onRegionChangeComplete={handleRegionChangeComplete}
           >
             {visibleSpots.map((spot: MappableSpot) => (
               <Marker
@@ -778,37 +878,63 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
               />
             ))}
           </MapView>
-          {currentUserLocation && (
-            <TouchableOpacity
-              style={styles.currentLocationButton}
-              onPress={goToCurrentUserLocation}
-            >
-              <Crosshair size={24} color={COLORS.core.boardBlack} />
-            </TouchableOpacity>
-          )}
+
+          <View style={styles.mapButtonsContainer} pointerEvents="box-none">
+            {currentUserLocation && (
+              <TouchableOpacity
+                style={styles.mapButton}
+                onPress={goToCurrentUserLocation}
+              >
+                <Crosshair size={24} color={COLORS.core.boardBlack} />
+              </TouchableOpacity>
+            )}
+
+            {/* Show "Go to selected spot" button if a spot is selected */}
+            {selectedLocation &&
+              visibleSpots.some((spot) => spot.name === selectedLocation) && (
+                <TouchableOpacity
+                  style={[styles.mapButton, styles.mapButtonWithLabel]}
+                  onPress={() => {
+                    const selectedSpot = visibleSpots.find(
+                      (spot) => spot.name === selectedLocation
+                    );
+                    if (selectedSpot && mapViewRef.current) {
+                      mapViewRef.current.animateToRegion(
+                        {
+                          latitude: selectedSpot.lat,
+                          longitude: selectedSpot.lng,
+                          latitudeDelta: 0.01,
+                          longitudeDelta: 0.01,
+                        },
+                        500
+                      );
+                    }
+                  }}
+                >
+                  <Text style={styles.mapButtonLabel}>Go to Selected Spot</Text>
+                </TouchableOpacity>
+              )}
+          </View>
+
           {isLoading && (
-            <View style={styles.mapLoadingOverlay}>
+            <View style={styles.mapLoadingOverlay} pointerEvents="none">
               <ActivityIndicator
                 size="large"
                 color={COLORS.core.midnightSurf}
               />
             </View>
           )}
+
           {visibleSpots.length === 0 && !isLoading && (
-            <View style={styles.mapEmptyOverlay}>
+            <View style={styles.mapEmptyOverlay} pointerEvents="none">
               <Text style={styles.mapEmptyText}>
-                {searchQuery
-                  ? "No spots found for your search."
-                  : currentPath.length <= 2
-                  ? "Navigate to a region to see spots."
-                  : "No spots available in this area."}
+                No spots in current view area. Try zooming out or panning the
+                map.
               </Text>
             </View>
           )}
         </View>
       )}
-
-      {activeTab === "list" && listOrLoadingIndicator()}
     </View>
   );
 };
@@ -849,9 +975,11 @@ const styles = StyleSheet.create({
   sectionHeader: {
     ...TYPOGRAPHY.subtitle,
     color: COLORS.core.boardBlack,
-    backgroundColor: "transparent",
+    backgroundColor: "white",
     paddingVertical: 10,
     paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.neutral[100],
   },
   locationItem: {
     flexDirection: "row",
@@ -879,26 +1007,18 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   backButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.neutral[100],
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[200],
+    paddingVertical: 5,
+    paddingHorizontal: 0,
+    backgroundColor: "transparent",
   },
   backButtonText: {
     ...TYPOGRAPHY.body,
     color: COLORS.text.primary,
   },
-  customSectionHeader: {
-    backgroundColor: "transparent",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-  },
   breadcrumbs: {
     ...TYPOGRAPHY.caption,
     color: COLORS.text.secondary,
-    paddingBottom: 5,
-    marginTop: -5,
+    marginTop: 4,
   },
   mapContainer: {
     flex: 1,
@@ -913,13 +1033,18 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  currentLocationButton: {
+  mapButtonsContainer: {
     position: "absolute",
     bottom: 20,
     right: 20,
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: 10,
+  },
+  mapButton: {
     backgroundColor: "rgba(255,255,255,0.9)",
     padding: 10,
-    borderRadius: 50,
+    borderRadius: 8,
     width: 44,
     height: 44,
     alignItems: "center",
@@ -929,6 +1054,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 5,
+  },
+  mapButtonWithLabel: {
+    width: "auto",
+    paddingHorizontal: 12,
+  },
+  mapButtonLabel: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.core.boardBlack,
   },
   mapLoadingOverlay: {
     position: "absolute",
@@ -1014,5 +1147,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  listWithHeaderContainer: {
+    flex: 1,
+    position: "relative",
+  },
+  stickyHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "white",
+    zIndex: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.neutral[200],
   },
 });
