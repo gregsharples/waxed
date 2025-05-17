@@ -59,11 +59,15 @@ interface LocationPickerProps {
     lat?: number,
     lng?: number
   ) => void;
+  onClose?: () => void;
+  onDone?: () => void;
 }
 
 export const LocationPicker: React.FC<LocationPickerProps> = ({
   selectedLocation,
   onSelectLocation,
+  onClose,
+  onDone,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);

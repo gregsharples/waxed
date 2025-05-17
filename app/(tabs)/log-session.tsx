@@ -10,7 +10,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 // import Slider from "@react-native-community/slider"; // No longer needed for wave height
 import { Picker } from "@react-native-picker/picker";
-import { CalendarDays, Clock, MapPin } from "lucide-react-native";
+import { CalendarDays, Clock, MapPin, X } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Modal,
@@ -251,7 +251,10 @@ export default function LogSessionScreen() {
                     />
                   )}
                   <TouchableOpacity
-                    style={styles.sheetButton}
+                    style={[
+                      styles.sheetButton,
+                      { backgroundColor: COLORS.core.sunsetCoral },
+                    ]}
                     onPress={handleConfirmDate}
                   >
                     <Text style={styles.sheetButtonText}>Done</Text>
@@ -329,7 +332,10 @@ export default function LogSessionScreen() {
                     </View>
                   )}
                   <TouchableOpacity
-                    style={styles.sheetButton}
+                    style={[
+                      styles.sheetButton,
+                      { backgroundColor: COLORS.core.sunsetCoral },
+                    ]}
                     onPress={handleConfirmDuration}
                   >
                     <Text style={styles.sheetButtonText}>Done</Text>
@@ -346,8 +352,16 @@ export default function LogSessionScreen() {
             >
               <View style={styles.sheetContainer}>
                 <View style={styles.locationSheetContent}>
-                  {/* Removed the empty string {" "} */}
-                  <Text style={styles.sheetTitle}>Select Location</Text>
+                  <View style={styles.sheetHeader}>
+                    <Text style={styles.sheetTitle}>Select Location</Text>
+                    <TouchableOpacity
+                      style={styles.closeButton}
+                      onPress={() => setShowLocationPickerSheet(false)}
+                      hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                    >
+                      <X size={24} color={COLORS.text.primary} />
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.pickerWrapper}>
                     <LocationPicker
                       selectedLocation={tempSelectedLocation}
@@ -360,7 +374,10 @@ export default function LogSessionScreen() {
                     </Text>
                   ) : null}
                   <TouchableOpacity
-                    style={styles.sheetButton}
+                    style={[
+                      styles.sheetButton,
+                      { backgroundColor: COLORS.core.sunsetCoral },
+                    ]}
                     onPress={handleConfirmLocation}
                   >
                     <Text style={styles.sheetButtonText}>Done</Text>
@@ -679,5 +696,17 @@ const styles = StyleSheet.create({
     height: Platform.OS === "ios" ? 150 : undefined, // Ensure items are tall enough for wheel
     fontSize: Platform.OS === "ios" ? TYPOGRAPHY.body.fontSize : undefined,
     // color: Platform.OS === "ios" ? "#000000" : undefined, // Color now applied directly to Picker.Item for iOS
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  closeButton: {
+    padding: 0,
+    marginTop: -20, // Adjust this value to fine-tune vertical alignment
   },
 });
