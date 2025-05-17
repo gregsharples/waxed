@@ -1,49 +1,64 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS } from '@/constants/Colors';
-import { TYPOGRAPHY } from '@/constants/Typography';
-import { Slider } from '@react-native-community/slider';
-import { Droplet, Clock, MapPin, Wind, Thermometer, Star } from 'lucide-react-native';
-import { LocationPicker } from '@/components/session/LocationPicker';
-import { MediaPicker } from '@/components/session/MediaPicker';
+import { LocationPicker } from "@/components/session/LocationPicker";
+import { MediaPicker } from "@/components/session/MediaPicker";
+import { COLORS } from "@/constants/Colors";
+import { TYPOGRAPHY } from "@/constants/Typography";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import Slider from "@react-native-community/slider";
+import { Clock, Droplet, MapPin, Star } from "lucide-react-native";
+import React, { useState } from "react";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LogSessionScreen() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [duration, setDuration] = useState(1);
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState("");
   const [waveHeight, setWaveHeight] = useState(0.5);
   const [windSpeed, setWindSpeed] = useState(5);
   const [temperature, setTemperature] = useState(20);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [rating, setRating] = useState(0);
-  const [media, setMedia] = useState<Array<{ uri: string; type: 'image' | 'video' }>>([]);
+  const [media, setMedia] = useState<
+    { uri: string; type: "image" | "video" }[]
+  >([]);
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setDate(selectedDate);
     }
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
-  const handleAddMedia = (newMedia: { uri: string; type: 'image' | 'video' }) => {
+  const handleAddMedia = (newMedia: {
+    uri: string;
+    type: "image" | "video";
+  }) => {
     setMedia([...media, newMedia]);
   };
 
   const handleRemoveMedia = (uri: string) => {
-    setMedia(media.filter(item => item.uri !== uri));
+    setMedia(media.filter((item) => item.uri !== uri));
   };
 
   const handleSubmit = () => {
@@ -62,7 +77,7 @@ export default function LogSessionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -128,7 +143,7 @@ export default function LogSessionScreen() {
               <Droplet size={20} color={COLORS.primary[600]} />
               <Text style={styles.cardTitle}>Conditions</Text>
             </View>
-            
+
             <View style={styles.conditionItem}>
               <Text style={styles.label}>Wave Height</Text>
               <Text style={styles.value}>{waveHeight.toFixed(1)}m</Text>
@@ -196,24 +211,26 @@ export default function LogSessionScreen() {
                 >
                   <Star
                     size={32}
-                    color={star <= rating ? COLORS.accent[500] : COLORS.neutral[300]}
-                    fill={star <= rating ? COLORS.accent[500] : 'transparent'}
+                    color={
+                      star <= rating ? COLORS.accent[500] : COLORS.neutral[300]
+                    }
+                    fill={star <= rating ? COLORS.accent[500] : "transparent"}
                   />
                 </TouchableOpacity>
               ))}
             </View>
             <Text style={styles.ratingText}>
               {rating === 0
-                ? 'Tap to rate your session'
+                ? "Tap to rate your session"
                 : rating === 1
-                ? 'Poor'
+                ? "Poor"
                 : rating === 2
-                ? 'Fair'
+                ? "Fair"
                 : rating === 3
-                ? 'Good'
+                ? "Good"
                 : rating === 4
-                ? 'Great'
-                : 'Excellent'}
+                ? "Great"
+                : "Excellent"}
             </Text>
           </View>
         </Animated.View>
@@ -276,20 +293,20 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   cardTitle: {
@@ -302,7 +319,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: COLORS.neutral[100],
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   dateText: {
     ...TYPOGRAPHY.body,
@@ -319,27 +336,27 @@ const styles = StyleSheet.create({
   value: {
     ...TYPOGRAPHY.body,
     color: COLORS.text.primary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 8,
   },
   slider: {
-    width: '100%',
+    width: "100%",
     height: 40,
   },
   conditionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   conditionItem: {
     marginTop: 16,
   },
   halfWidth: {
-    width: '48%',
+    width: "48%",
   },
   ratingContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   starButton: {
     padding: 8,
@@ -347,7 +364,7 @@ const styles = StyleSheet.create({
   ratingText: {
     ...TYPOGRAPHY.subtitle,
     color: COLORS.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
   },
   notesInput: {
@@ -365,10 +382,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginHorizontal: 16,
     marginTop: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   submitButtonText: {
     ...TYPOGRAPHY.buttonText,
-    color: 'white',
+    color: "white",
   },
 });
