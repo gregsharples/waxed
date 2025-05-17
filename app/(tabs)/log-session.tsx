@@ -5,7 +5,8 @@ import { TYPOGRAPHY } from "@/constants/Typography";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import Slider from "@react-native-community/slider";
+import Slider from "@react-native-community/slider"; // Will be removed from duration picker
+import { Picker } from "@react-native-picker/picker";
 import {
   CalendarDays,
   Clock,
@@ -31,10 +32,13 @@ export default function LogSessionScreen() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false); // This will be reused for the inline picker on iOS
   const [showDatePickerSheet, setShowDatePickerSheet] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date()); // For date picker sheet
-  const [duration, setDuration] = useState(1);
+  const [tempDate, setTempDate] = useState(new Date()); // For date & time picker sheet
+  const [duration, setDuration] = useState(1); // Duration in total hours
   const [showDurationPickerSheet, setShowDurationPickerSheet] = useState(false);
-  const [tempDuration, setTempDuration] = useState(1); // For duration picker sheet
+  const [tempHours, setTempHours] = useState(Math.floor(duration));
+  const [tempMinutes, setTempMinutes] = useState(
+    Math.round((duration % 1) * 60)
+  );
   const [selectedLocation, setSelectedLocation] = useState("");
   const [waveHeight, setWaveHeight] = useState(0.5);
   const [notes, setNotes] = useState("");
@@ -60,16 +64,37 @@ export default function LogSessionScreen() {
   };
 
   const handleConfirmDuration = () => {
-    setDuration(tempDuration);
+    const totalHours = tempHours + tempMinutes / 60;
+    setDuration(totalHours);
     setShowDurationPickerSheet(false);
   };
 
+  const formatDuration = (totalHours: number) => {
+    const hours = Math.floor(totalHours);
+    const minutes = Math.round((totalHours % 1) * 60);
+    let durationString = "";
+    if (hours > 0) {
+      durationString += `${hours} hr`;
+    }
+    if (minutes > 0) {
+      if (hours > 0) durationString += " ";
+      durationString += `${minutes} min`;
+    }
+    if (hours === 0 && minutes === 0) {
+      return "0 min"; // Or some default like "Set duration"
+    }
+    return durationString;
+  };
+
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleString("en-US", {
       weekday: "short",
       day: "numeric",
       month: "short",
       year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -132,7 +157,8 @@ export default function LogSessionScreen() {
               <TouchableOpacity
                 style={styles.dateTimeItem}
                 onPress={() => {
-                  setTempDuration(duration); // Initialize tempDuration with current duration
+                  setTempHours(Math.floor(duration));
+                  setTempMinutes(Math.round((duration % 1) * 60));
                   setShowDurationPickerSheet(true);
                 }}
               >
@@ -142,17 +168,16 @@ export default function LogSessionScreen() {
                   style={styles.iconStyle}
                 />
                 <Text style={styles.dateTimeText}>
-                  {duration.toFixed(1)} hours
+                  {formatDuration(duration)}
                 </Text>
               </TouchableOpacity>
             </View>
             {showDatePicker && (
               <DateTimePicker
-                value={date}
-                mode="date"
+                value={tempDate} // Use tempDate for the inline picker as well if it's for the sheet
+                mode="datetime" // Changed to datetime
                 display="default"
                 onChange={onDateChange}
-                // display={Platform.OS === "ios" ? "spinner" : "default"} // spinner can be good for sheets
               />
             )}
             {/* Date Picker Modal/Sheet */}
@@ -171,7 +196,7 @@ export default function LogSessionScreen() {
                     // This re-uses the existing logic for Android.
                     <DateTimePicker
                       value={tempDate}
-                      mode="date"
+                      mode="datetime" // Changed to datetime
                       display="default"
                       onChange={(event, selectedDate) => {
                         onDateChange(event, selectedDate);
@@ -183,7 +208,7 @@ export default function LogSessionScreen() {
                   {Platform.OS === "ios" && (
                     <DateTimePicker
                       value={tempDate}
-                      mode="date"
+                      mode="datetime" // Changed to datetime
                       display="spinner" // Spinner is better for sheets on iOS
                       onChange={onDateChange}
                       style={styles.iosPickerStyle}
@@ -208,20 +233,65 @@ export default function LogSessionScreen() {
               <View style={styles.sheetContainer}>
                 <View style={styles.sheetContent}>
                   <Text style={styles.sheetTitle}>Select Duration</Text>
-                  <Text style={styles.value}>
-                    {tempDuration.toFixed(1)} hours
-                  </Text>
-                  <Slider
-                    style={styles.slider} // Ensure slider style is applied
-                    minimumValue={0.5}
-                    maximumValue={5}
-                    step={0.5}
-                    value={tempDuration}
-                    onValueChange={setTempDuration}
-                    minimumTrackTintColor={COLORS.primary[500]}
-                    maximumTrackTintColor={COLORS.neutral[200]}
-                    thumbTintColor={COLORS.primary[600]}
-                  />
+                  {Platform.OS === "ios" ? (
+                    <DateTimePicker
+                      value={new Date(0, 0, 0, tempHours, tempMinutes, 0)} // Date representing duration
+                      mode="countdown"
+                      display="spinner"
+                      minuteInterval={5} // Changed to 5 minutes
+                      textColor={COLORS.core.boardBlack} // Added textColor for iOS
+                      onChange={(event, newDate?: Date) => {
+                        if (newDate) {
+                          // For countdown, newDate's time part gives the duration
+                          setTempHours(newDate.getHours());
+                          setTempMinutes(newDate.getMinutes());
+                        }
+                      }}
+                      style={styles.iosPickerStyle} // Reuse existing style for width/height
+                    />
+                  ) : (
+                    // Android uses the dual Picker setup
+                    <View style={styles.durationPickerRow}>
+                      <View style={styles.pickerContainer}>
+                        <Text style={styles.pickerLabel}>Hours</Text>
+                        <Picker
+                          selectedValue={tempHours}
+                          style={styles.pickerStyle}
+                          itemStyle={styles.pickerItemStyle}
+                          onValueChange={(itemValue: number) =>
+                            setTempHours(itemValue)
+                          }
+                        >
+                          {[...Array(6).keys()].map(
+                            (
+                              h // 0-5 hours
+                            ) => (
+                              <Picker.Item key={h} label={`${h}`} value={h} />
+                            )
+                          )}
+                        </Picker>
+                      </View>
+                      <View style={styles.pickerContainer}>
+                        <Text style={styles.pickerLabel}>Minutes</Text>
+                        <Picker
+                          selectedValue={tempMinutes}
+                          style={styles.pickerStyle}
+                          itemStyle={styles.pickerItemStyle}
+                          onValueChange={(itemValue: number) =>
+                            setTempMinutes(itemValue)
+                          }
+                        >
+                          {[0, 15, 30, 45].map(
+                            (
+                              m // 0, 15, 30, 45 minutes
+                            ) => (
+                              <Picker.Item key={m} label={`${m}`} value={m} />
+                            )
+                          )}
+                        </Picker>
+                      </View>
+                    </View>
+                  )}
                   <TouchableOpacity
                     style={styles.sheetButton}
                     onPress={handleConfirmDuration}
@@ -391,18 +461,24 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   dateTimeRow: {
-    flexDirection: "row",
-    justifyContent: "space-around", // Or 'space-between'
-    alignItems: "center",
-    marginTop: 8, // Add some margin if needed
-    paddingVertical: 12,
-    paddingHorizontal: 10, // Adjust padding as needed
-    backgroundColor: COLORS.neutral[100],
+    flexDirection: "column", // Changed to column
+    alignItems: "stretch", // Stretch items to fill width
+    marginTop: 8,
+    paddingVertical: 8, // Adjusted padding
+    paddingHorizontal: 0, // No horizontal padding needed if items stretch
     borderRadius: 8,
+    // borderWidth: 1, // Removed border
+    // borderColor: COLORS.neutral[200], // Removed border
   },
   dateTimeItem: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between", // To push icon and text apart if desired, or center
+    paddingVertical: 10, // Add some padding to each item
+    paddingHorizontal: 16, // Add horizontal padding to each item
+    // backgroundColor: COLORS.neutral[100], // Example if each item needs a background
+    // borderRadius: 8, // Example if each item needs a border radius
+    // marginBottom: 8, // Add margin if items are too close
   },
   iconStyle: {
     marginRight: 6,
@@ -510,7 +586,7 @@ const styles = StyleSheet.create({
     height: 200, // Adjust height as needed
   },
   sheetButton: {
-    backgroundColor: COLORS.primary[600],
+    backgroundColor: COLORS.core.boardBlack, // Changed to boardBlack
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 30,
@@ -521,5 +597,30 @@ const styles = StyleSheet.create({
   sheetButtonText: {
     ...TYPOGRAPHY.buttonText,
     color: "white",
+  },
+  durationPickerRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 20,
+  },
+  pickerContainer: {
+    flex: 1,
+    alignItems: "center", // Center label above picker
+  },
+  pickerLabel: {
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text.secondary,
+    marginBottom: 5,
+  },
+  pickerStyle: {
+    height: Platform.OS === "ios" ? 150 : 50, // iOS needs explicit height for wheel
+    width: Platform.OS === "ios" ? "auto" : 120, // Android can use fixed width
+  },
+  pickerItemStyle: {
+    // For iOS, to style the items in the wheel picker
+    height: Platform.OS === "ios" ? 150 : undefined, // Ensure items are tall enough for wheel
+    fontSize: Platform.OS === "ios" ? TYPOGRAPHY.body.fontSize : undefined,
+    // color: Platform.OS === "ios" ? "#000000" : undefined, // Color now applied directly to Picker.Item for iOS
   },
 });
