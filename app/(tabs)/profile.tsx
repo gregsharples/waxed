@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...TYPOGRAPHY.h1,
-    color: COLORS.text.primary,
+    color: COLORS.core.boardBlack,
   },
   settingsButton: {
     padding: 8,
