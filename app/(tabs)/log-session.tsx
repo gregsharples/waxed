@@ -39,6 +39,10 @@ export default function LogSessionScreen() {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [showLocationPickerSheet, setShowLocationPickerSheet] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState(""); // For location picker sheet
+  const [tempSelectedLocationId, setTempSelectedLocationId] = useState<
+    string | undefined
+  >(undefined); // Store ID too
+
   // const [waveHeight, setWaveHeight] = useState(0.5); // Old wave height state
   const [selectedWaveHeight, setSelectedWaveHeight] = useState<
     WaveHeightOption | undefined
@@ -79,7 +83,19 @@ export default function LogSessionScreen() {
 
   const handleConfirmLocation = () => {
     setSelectedLocation(tempSelectedLocation);
+    // Potentially save tempSelectedLocationId if needed for submission
     setShowLocationPickerSheet(false);
+  };
+
+  // New handler for LocationPicker's onSelectLocation
+  const handleTempLocationSelect = (
+    locationName: string,
+    locationId?: string
+    // lat?: number, // Not using lat/lng directly in LogSessionScreen state for now
+    // lng?: number
+  ) => {
+    setTempSelectedLocation(locationName);
+    setTempSelectedLocationId(locationId); // Store the ID if available
   };
 
   const formatDuration = (totalHours: number) => {
@@ -192,14 +208,14 @@ export default function LogSessionScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-            {showDatePicker && (
+            {/* {showDatePicker && (
               <DateTimePicker
                 value={tempDate} // Use tempDate for the inline picker as well if it's for the sheet
                 mode="datetime" // Changed to datetime
                 display="default"
                 onChange={onDateChange}
               />
-            )}
+            )} */}
             {/* Date Picker Modal/Sheet */}
             <Modal
               animationType="slide"
@@ -330,13 +346,12 @@ export default function LogSessionScreen() {
             >
               <View style={styles.sheetContainer}>
                 <View style={styles.locationSheetContent}>
-                  {" "}
-                  {/* Changed style name for specific layout */}
+                  {/* Removed the empty string {" "} */}
                   <Text style={styles.sheetTitle}>Select Location</Text>
                   <View style={styles.pickerWrapper}>
                     <LocationPicker
                       selectedLocation={tempSelectedLocation}
-                      onSelectLocation={setTempSelectedLocation}
+                      onSelectLocation={handleTempLocationSelect} // Use the new handler
                     />
                   </View>
                   {tempSelectedLocation ? (

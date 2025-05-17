@@ -4,9 +4,14 @@ const path = require("path");
 
 // eslint-disable-next-line no-undef
 const INPUT_JSON_PATH = path.join(__dirname, "..", "data", "spots.json");
-// eslint-disable-next-line no-undef
-const OUTPUT_CSV_PATH = path.join(__dirname, "..", "processed_spots.csv");
-const MAX_PATH_LEVELS = 6;
+
+const OUTPUT_CSV_PATH = path.join(
+  __dirname,
+  "..",
+  "data",
+  "processed_spots_flat_v2.csv"
+); // New output file name
+const MAX_GEONAME_PATH_LEVELS_TO_CONSIDER = 5; // For Continent, Country, Region, Area
 
 function getNestedValue(obj, pathString, defaultValue = null) {
   const keys = pathString.split(".");
@@ -29,10 +34,13 @@ function getSurflineLink(links, key) {
   return link ? link.href : null;
 }
 
-function parseEnumeratedPath(enumeratedPath) {
+function parseEnumeratedPath(
+  enumeratedPath,
+  maxLevels = MAX_GEONAME_PATH_LEVELS_TO_CONSIDER
+) {
   const pathParts = (enumeratedPath || "").split(",").slice(1); // Skip the first empty or "Earth" part
   const levels = {};
-  for (let i = 0; i < MAX_PATH_LEVELS; i++) {
+  for (let i = 0; i < maxLevels; i++) {
     levels[`path_level_${i + 1}`] = pathParts[i] || null;
   }
   return levels;
@@ -51,89 +59,133 @@ async function processSpots() {
       return;
     }
 
-    const spots = jsonData.contains;
-    console.log(`Found ${spots.length} entries to process.`);
+    const allEntitiesFromJSON = jsonData.contains;
+    console.log(`Found ${allEntitiesFromJSON.length} total entities in JSON.`);
+
+    // First pass: Extract geonames and their relevant paths
+    const geonamesById = new Map();
+    for (const entity of allEntitiesFromJSON) {
+      if (entity.category === "geonames") {
+        // We need path_level_2 (Continent) to path_level_5 (Area)
+        const paths = parseEnumeratedPath(
+          entity.enumeratedPath,
+          MAX_GEONAME_PATH_LEVELS_TO_CONSIDER
+        );
+        geonamesById.set(entity._id, {
+          name: entity.name,
+          continent: paths.path_level_2,
+          country: paths.path_level_3,
+          region: paths.path_level_4,
+          area: paths.path_level_5, // Added Area
+        });
+      }
+    }
+    console.log(`Processed ${geonamesById.size} geonames entities for lookup.`);
 
     const csvHeaders = [
       "id",
-      "name",
+      "spot_name",
       "latitude",
       "longitude",
-      "depth",
-      "full_hierarchical_path",
-      ...Array.from(
-        { length: MAX_PATH_LEVELS },
-        (_, i) => `path_level_${i + 1}`
-      ),
-      "geoname_id",
-      "geonames_fcode",
-      "geonames_fcode_name",
-      "geonames_country_name",
-      "geonames_country_code",
-      "geonames_admin1_name",
+      "continent",
+      "country",
+      "region",
+      "area", // Added area column
+      "type",
       "category",
       "has_spots_flag",
       "surfline_www_url",
       "surfline_travel_url",
+      "original_depth",
+      "original_enumerated_path",
+      "lies_in_1",
+      "lies_in_2",
+      "lies_in_3",
     ];
-
     let csvContent = csvHeaders.join(",") + "\n";
+    let spotsProcessedCount = 0;
+    // let nonSpotEntitiesSkipped = 0; // Optional: if you want to count them
 
-    for (const spot of spots) {
-      let latValue = getNestedValue(spot, "location.coordinates.1");
-      let lonValue = getNestedValue(spot, "location.coordinates.0");
+    // Second pass: Process spots and link to geonames hierarchy
+    for (const entity of allEntitiesFromJSON) {
+      if (entity.type === "spot") {
+        spotsProcessedCount++;
+        let spotContinent = null;
+        let spotCountry = null;
+        let spotRegion = null;
+        let spotArea = null; // Added Area
 
-      let parsedLat = parseFloat(latValue);
-      let parsedLon = parseFloat(lonValue);
+        const liesInIds = entity.liesIn || [];
+        for (const parentId of liesInIds) {
+          if (geonamesById.has(parentId)) {
+            const geonameParent = geonamesById.get(parentId);
+            spotContinent = geonameParent.continent || spotContinent;
+            spotCountry = geonameParent.country || spotCountry;
+            spotRegion = geonameParent.region || spotRegion;
+            spotArea = geonameParent.area || spotArea; // Get area
+            // If we find a geoname parent that provides all levels, we can break
+            // or we can let it iterate to see if a "closer" geoname parent in liesIn provides more specific info
+            // For now, let's assume the first one that provides data is good enough or we take the most complete.
+            // A simple strategy: take the first one that gives us something.
+            if (spotContinent && spotCountry && spotRegion && spotArea) break;
+          }
+        }
 
-      const finalLat = !isNaN(parsedLat) ? parsedLat : "";
-      const finalLon = !isNaN(parsedLon) ? parsedLon : "";
+        if (
+          !spotContinent ||
+          !spotCountry ||
+          !spotRegion /* || !spotArea // Area might be optional */
+        ) {
+          // console.warn(`Spot ID ${entity._id} (${entity.name}) could not fully resolve geoname hierarchy. C: ${spotContinent}, Co: ${spotCountry}, R: ${spotRegion}, A: ${spotArea}. LiesIn: [${liesInIds.join(',')}]`);
+        }
 
-      const pathLevels = parseEnumeratedPath(spot.enumeratedPath);
+        let latValue = getNestedValue(entity, "location.coordinates.1");
+        let lonValue = getNestedValue(entity, "location.coordinates.0");
+        let parsedLat = parseFloat(latValue);
+        let parsedLon = parseFloat(lonValue);
+        const finalLat = !isNaN(parsedLat) ? parsedLat : "";
+        const finalLon = !isNaN(parsedLon) ? parsedLon : "";
 
-      const row = [
-        spot._id || "",
-        `"${(spot.name || "").replace(/"/g, '""')}"`, // Escape double quotes in name
-        finalLat,
-        finalLon,
-        spot.depth,
-        `"${(spot.enumeratedPath || "").replace(/"/g, '""')}"`,
-        ...Array.from(
-          { length: MAX_PATH_LEVELS },
-          (_, i) =>
-            `"${(pathLevels[`path_level_${i + 1}`] || "").replace(/"/g, '""')}"`
-        ),
-        spot.geonameId || "",
-        getNestedValue(spot, "geonames.fcode", ""),
-        `"${getNestedValue(spot, "geonames.fcodeName", "").replace(
-          /"/g,
-          '""'
-        )}"`,
-        `"${getNestedValue(spot, "geonames.countryName", "").replace(
-          /"/g,
-          '""'
-        )}"`,
-        getNestedValue(spot, "geonames.countryCode", ""),
-        `"${getNestedValue(spot, "geonames.adminName1", "").replace(
-          /"/g,
-          '""'
-        )}"`,
-        spot.category || "",
-        spot.hasSpots === undefined ? "" : spot.hasSpots,
-        getSurflineLink(getNestedValue(spot, "associated.links"), "www") || "",
-        getSurflineLink(getNestedValue(spot, "associated.links"), "travel") ||
-          "",
-      ];
-      csvContent +=
-        row
-          .map((val) => (val === null || val === undefined ? "" : val))
-          .join(",") + "\n";
+        const row = [
+          entity._id || "",
+          `"${(entity.name || "").replace(/"/g, '""')}"`,
+          finalLat,
+          finalLon,
+          `"${(spotContinent || "").replace(/"/g, '""')}"`,
+          `"${(spotCountry || "").replace(/"/g, '""')}"`,
+          `"${(spotRegion || "").replace(/"/g, '""')}"`,
+          `"${(spotArea || "").replace(/"/g, '""')}"`, // Added area value
+          entity.type || "",
+          entity.category || "",
+          entity.hasSpots === undefined ? "" : entity.hasSpots,
+          getSurflineLink(getNestedValue(entity, "associated.links"), "www") ||
+            "",
+          getSurflineLink(
+            getNestedValue(entity, "associated.links"),
+            "travel"
+          ) || "",
+          entity.depth || "",
+          `"${(entity.enumeratedPath || "").replace(/"/g, '""')}"`,
+          `"${(liesInIds[0] || "").replace(/"/g, '""')}"`,
+          `"${(liesInIds[1] || "").replace(/"/g, '""')}"`,
+          `"${(liesInIds[2] || "").replace(/"/g, '""')}"`,
+        ];
+        csvContent +=
+          row
+            .map((val) => (val === null || val === undefined ? "" : val))
+            .join(",") + "\n";
+      } else {
+        // nonSpotEntitiesSkipped++; // Optional: count skipped entities
+      }
     }
 
     fs.writeFileSync(OUTPUT_CSV_PATH, csvContent);
     console.log(
-      `Successfully processed data. Output CSV written to: ${OUTPUT_CSV_PATH}`
+      `Successfully processed ${spotsProcessedCount} spots. Output CSV written to: ${OUTPUT_CSV_PATH}`
     );
+    // if (nonSpotEntitiesSkipped > 0) { // Optional
+    //   console.log(`Skipped ${nonSpotEntitiesSkipped} non-spot entities.`);
+    // }
   } catch (error) {
     console.error("Error processing spots:", error);
   }
