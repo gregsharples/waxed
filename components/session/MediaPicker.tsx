@@ -1,16 +1,23 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
-import { COLORS } from '@/constants/Colors';
-import { TYPOGRAPHY } from '@/constants/Typography';
-import { Camera, Image as ImageIcon, Trash2, Video } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { COLORS } from "@/constants/Colors";
+import { TYPOGRAPHY } from "@/constants/Typography";
+import * as ImagePicker from "expo-image-picker";
+import { Plus, Trash2, Video } from "lucide-react-native"; // PlusSquare will be removed by formatter if not used
+import React from "react";
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface MediaPickerProps {
-  media: Array<{
+  media: {
     uri: string;
-    type: 'image' | 'video';
-  }>;
-  onAddMedia: (media: { uri: string; type: 'image' | 'video' }) => void;
+    type: "image" | "video";
+  }[];
+  onAddMedia: (media: { uri: string; type: "image" | "video" }) => void;
   onRemoveMedia: (uri: string) => void;
 }
 
@@ -19,6 +26,28 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
   onAddMedia,
   onRemoveMedia,
 }) => {
+  const handleAddMediaPress = () => {
+    Alert.alert(
+      "Add Media",
+      "Choose an option",
+      [
+        {
+          text: "Photo Library",
+          onPress: () => pickImage(),
+        },
+        {
+          text: "Camera",
+          onPress: () => takePhoto(),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
@@ -30,15 +59,15 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
       const asset = result.assets[0];
       onAddMedia({
         uri: asset.uri,
-        type: asset.type === 'video' ? 'video' : 'image',
+        type: asset.type === "video" ? "video" : "image",
       });
     }
   };
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    
-    if (status === 'granted') {
+
+    if (status === "granted") {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.All,
         allowsEditing: true,
@@ -49,7 +78,7 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
         const asset = result.assets[0];
         onAddMedia({
           uri: asset.uri,
-          type: asset.type === 'video' ? 'video' : 'image',
+          type: asset.type === "video" ? "video" : "image",
         });
       }
     }
@@ -57,41 +86,31 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-          <ImageIcon size={24} color={COLORS.primary[600]} />
-          <Text style={styles.buttonText}>Choose Media</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.addButton} onPress={takePhoto}>
-          <Camera size={24} color={COLORS.primary[600]} />
-          <Text style={styles.buttonText}>Take Photo/Video</Text>
-        </TouchableOpacity>
-      </View>
-
-      {media.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.mediaContainer}
+      <View style={styles.gridContainer}>
+        <TouchableOpacity
+          style={styles.addMediaButton}
+          onPress={handleAddMediaPress}
         >
-          {media.map((item, index) => (
-            <View key={index} style={styles.mediaItem}>
-              <Image source={{ uri: item.uri }} style={styles.mediaPreview} />
-              {item.type === 'video' && (
-                <View style={styles.videoIndicator}>
-                  <Video size={16} color="white" />
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => onRemoveMedia(item.uri)}
-              >
-                <Trash2 size={16} color={COLORS.error[600]} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
+          <Plus size={32} color={COLORS.neutral[500]} />
+          <Text style={styles.addMediaText}>Add</Text>
+        </TouchableOpacity>
+        {media.map((item, index) => (
+          <View key={index} style={styles.mediaItem}>
+            <Image source={{ uri: item.uri }} style={styles.mediaPreview} />
+            {item.type === "video" && (
+              <View style={styles.videoIndicator}>
+                <Video size={16} color="white" />
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => onRemoveMedia(item.uri)}
+            >
+              <Trash2 size={16} color={COLORS.error[600]} />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
     </View>
   );
 };
@@ -100,32 +119,28 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 8,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  gridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8, // space between items
   },
-  addButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary[50],
-    padding: 12,
+  addMediaButton: {
+    width: 100,
+    height: 100,
     borderRadius: 8,
-    marginHorizontal: 4,
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
+    // borderWidth: 1, // Removed border
+    // borderColor: COLORS.neutral[300], // Removed border
   },
-  buttonText: {
-    ...TYPOGRAPHY.buttonText,
-    color: COLORS.primary[600],
-    marginLeft: 8,
-  },
-  mediaContainer: {
-    flexDirection: 'row',
+  addMediaText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.neutral[500],
+    marginTop: 4,
   },
   mediaItem: {
-    position: 'relative',
-    marginRight: 8,
+    position: "relative",
   },
   mediaPreview: {
     width: 100,
@@ -133,18 +148,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   videoIndicator: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 12,
     padding: 4,
   },
   removeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 4,
   },
