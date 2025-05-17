@@ -1,50 +1,71 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native';
 import { COLORS } from '@/constants/Colors';
 import { TYPOGRAPHY } from '@/constants/Typography';
-import { ChevronDown, X, MapPin } from 'lucide-react-native';
+import { ChevronDown, MapPin, Search, X } from 'lucide-react-native';
+import * as Location from 'expo-location';
+import MapView, { Marker } from 'react-native-maps';
 
 interface LocationPickerProps {
-  locations: string[];
   selectedLocation: string;
   onSelectLocation: (location: string) => void;
 }
 
+// Mock data - replace with Supabase data
+const MOCK_LOCATIONS = [
+  { id: '1', name: 'Malibu Beach', lat: 34.0259, lng: -118.7798 },
+  { id: '2', name: 'Huntington Beach', lat: 33.6595, lng: -118.0043 },
+  { id: '3', name: 'Newport Beach', lat: 33.6189, lng: -117.9289 },
+];
+
 export const LocationPicker: React.FC<LocationPickerProps> = ({
-  locations,
   selectedLocation,
-  onSelectLocation
+  onSelectLocation,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
-  const handleSelect = (location: string) => {
-    onSelectLocation(location);
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation(location);
+      }
+    })();
+  }, []);
+
+  const filteredLocations = MOCK_LOCATIONS.filter(location =>
+    location.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleSelectLocation = (locationName: string) => {
+    onSelectLocation(locationName);
     setModalVisible(false);
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.selector} 
+      <TouchableOpacity
+        style={styles.selector}
         onPress={() => setModalVisible(true)}
       >
-        <MapPin size={18} color={COLORS.neutral[500]} style={styles.icon} />
-        <Text style={[
-          styles.selectorText,
-          !selectedLocation && styles.placeholderText
-        ]}>
-          {selectedLocation || 'Select a surf spot'}
+        <MapPin size={20} color={COLORS.text.secondary} />
+        <Text style={[styles.selectorText, !selectedLocation && styles.placeholder]}>
+          {selectedLocation || 'Select location'}
         </Text>
-        <ChevronDown size={18} color={COLORS.neutral[500]} />
+        <ChevronDown size={20} color={COLORS.text.secondary} />
       </TouchableOpacity>
 
       <Modal
+        visible={modalVisible}
         animationType="slide"
         transparent={true}
-        visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Location</Text>
@@ -53,32 +74,71 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
               </TouchableOpacity>
             </View>
 
-            <FlatList
-              data={locations}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={[
-                    styles.locationItem,
-                    selectedLocation === item && styles.selectedItem
-                  ]} 
-                  onPress={() => handleSelect(item)}
+            <View style={styles.searchContainer}>
+              <Search size={20} color={COLORS.text.secondary} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search locations..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            {showMap && userLocation && (
+              <View style={styles.mapContainer}>
+                <MapView
+                  style={styles.map}
+                  initialRegion={{
+                    latitude: userLocation.coords.latitude,
+                    longitude: userLocation.coords.longitude,
+                    latitudeDelta: 0.0922,
+                    longitudeDelta: 0.0421,
+                  }}
                 >
-                  <Text 
+                  {filteredLocations.map((location) => (
+                    <Marker
+                      key={location.id}
+                      coordinate={{
+                        latitude: location.lat,
+                        longitude: location.lng,
+                      }}
+                      title={location.name}
+                      onPress={() => handleSelectLocation(location.name)}
+                    />
+                  ))}
+                </MapView>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={() => setShowMap(!showMap)}
+            >
+              <Text style={styles.toggleButtonText}>
+                {showMap ? 'Show List View' : 'Show Map View'}
+              </Text>
+            </TouchableOpacity>
+
+            {!showMap && (
+              <FlatList
+                data={filteredLocations}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
                     style={[
-                      styles.locationItemText,
-                      selectedLocation === item && styles.selectedItemText
+                      styles.locationItem,
+                      selectedLocation === item.name && styles.selectedItem,
                     ]}
+                    onPress={() => handleSelectLocation(item.name)}
                   >
-                    {item}
-                  </Text>
-                  {selectedLocation === item && (
-                    <View style={styles.checkmark} />
-                  )}
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={styles.listContent}
-            />
+                    <Text style={styles.locationName}>{item.name}</Text>
+                    {selectedLocation === item.name && (
+                      <View style={styles.selectedIndicator} />
+                    )}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -93,74 +153,96 @@ const styles = StyleSheet.create({
   selector: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: COLORS.neutral[200],
+    padding: 12,
+    backgroundColor: COLORS.neutral[100],
     borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
     marginTop: 8,
-  },
-  icon: {
-    marginRight: 8,
   },
   selectorText: {
     ...TYPOGRAPHY.body,
     color: COLORS.text.primary,
     flex: 1,
+    marginLeft: 8,
   },
-  placeholderText: {
-    color: COLORS.text.disabled,
+  placeholder: {
+    color: COLORS.text.secondary,
   },
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingVertical: 20,
-    maxHeight: '70%',
+    height: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.neutral[200],
   },
   modalTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text.primary,
   },
-  listContent: {
-    paddingHorizontal: 20,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: COLORS.neutral[100],
+    margin: 16,
+    borderRadius: 8,
+  },
+  searchInput: {
+    ...TYPOGRAPHY.body,
+    flex: 1,
+    marginLeft: 8,
+    color: COLORS.text.primary,
   },
   locationItem: {
-    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.neutral[100],
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  locationItemText: {
+  locationName: {
     ...TYPOGRAPHY.body,
     color: COLORS.text.primary,
   },
   selectedItem: {
     backgroundColor: COLORS.primary[50],
   },
-  selectedItemText: {
-    color: COLORS.primary[600],
-    ...TYPOGRAPHY.subtitle,
-  },
-  checkmark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  selectedIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: COLORS.primary[600],
+  },
+  mapContainer: {
+    height: 300,
+    margin: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  map: {
+    flex: 1,
+  },
+  toggleButton: {
+    padding: 12,
+    backgroundColor: COLORS.primary[50],
+    borderRadius: 8,
+    margin: 16,
+    alignItems: 'center',
+  },
+  toggleButtonText: {
+    ...TYPOGRAPHY.buttonText,
+    color: COLORS.primary[600],
   },
 });
