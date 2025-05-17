@@ -125,17 +125,6 @@ export default function LogSessionScreen() {
 
   const handleSubmit = () => {
     // TODO: Implement session saving logic
-    console.log({
-      date,
-      duration,
-      selectedLocation,
-      waveHeight: selectedWaveHeight, // Updated
-      waveQuality: selectedWaveQuality, // Added
-      crowd: selectedCrowd, // Added crowd
-      notes,
-      rating,
-      media,
-    });
   };
 
   return (
@@ -434,7 +423,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 140, // Adjusted padding
   },
   header: {
     paddingHorizontal: 16,
@@ -578,7 +567,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   submitButton: {
-    backgroundColor: COLORS.primary[600],
+    backgroundColor: COLORS.core.sunsetCoral, // Changed to coral color
     borderRadius: 16,
     paddingVertical: 16,
     marginHorizontal: 16,
