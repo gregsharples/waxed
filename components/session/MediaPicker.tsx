@@ -1,6 +1,7 @@
 import { COLORS } from "@/constants/Colors";
 import { TYPOGRAPHY } from "@/constants/Typography";
 import * as ImagePicker from "expo-image-picker";
+import * as VideoThumbnails from "expo-video-thumbnails";
 import { Plus, Trash2, Video } from "lucide-react-native"; // PlusSquare will be removed by formatter if not used
 import React from "react";
 import {
@@ -16,8 +17,13 @@ interface MediaPickerProps {
   media: {
     uri: string;
     type: "image" | "video";
+    thumbnailUri?: string; // Added for video thumbnails
   }[];
-  onAddMedia: (media: { uri: string; type: "image" | "video" }) => void;
+  onAddMedia: (media: {
+    uri: string;
+    type: "image" | "video";
+    thumbnailUri?: string;
+  }) => void;
   onRemoveMedia: (uri: string) => void;
 }
 
@@ -53,21 +59,46 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
     console.log("Attempting to pick image from library...");
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All, // Reverted: Not an array
-        allowsEditing: true,
+        mediaTypes: ["images", "videos"] as any, // Using lowercase strings as per error hint
+        allowsEditing: false, // Disabled cropping
         quality: 1,
+        allowsMultipleSelection: true, // Enabled multiple selection
       });
       console.log("Image library result:", JSON.stringify(result, null, 2));
 
-      if (!result.canceled) {
-        const asset = result.assets[0];
-        console.log("Selected asset:", JSON.stringify(asset, null, 2));
-        onAddMedia({
-          uri: asset.uri,
-          type: asset.type === "video" ? "video" : "image",
-        });
+      if (!result.canceled && result.assets) {
+        for (const asset of result.assets) {
+          console.log("Selected asset (raw object):", asset); // Log raw asset object
+          let thumbnailUri: string | undefined = undefined;
+          if (asset.type === "video" && asset.uri) {
+            console.log(
+              `Attempting to generate thumbnail for video URI: ${asset.uri}`
+            );
+            try {
+              const { uri: generatedThumbnailUri } =
+                await VideoThumbnails.getThumbnailAsync(
+                  // Corrected function name
+                  asset.uri,
+                  { time: 1000 } // Generate thumbnail at 1 second
+                );
+              thumbnailUri = generatedThumbnailUri;
+              console.log(`Generated thumbnail URI: ${thumbnailUri}`);
+            } catch (e) {
+              console.warn(
+                "Could not generate thumbnail for video",
+                asset.uri,
+                e
+              );
+            }
+          }
+          onAddMedia({
+            uri: asset.uri,
+            type: asset.type === "video" ? "video" : "image",
+            thumbnailUri,
+          });
+        }
       } else {
-        console.log("Image picking cancelled.");
+        console.log("Image picking cancelled or no assets selected.");
       }
     } catch (error) {
       console.error("Error picking image:", error);
@@ -89,20 +120,43 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
         console.log("Camera permission granted. Launching camera...");
         const result = await ImagePicker.launchCameraAsync({
           // mediaTypes: ImagePicker.MediaTypeOptions.Images, // Option removed to rely on default
-          allowsEditing: true,
+          allowsEditing: false, // Disabled cropping
           quality: 1,
         });
         console.log("Camera launch result:", JSON.stringify(result, null, 2));
 
-        if (!result.canceled) {
-          const asset = result.assets[0];
-          console.log("Captured asset:", JSON.stringify(asset, null, 2));
+        if (!result.canceled && result.assets) {
+          const asset = result.assets[0]; // Camera returns a single asset
+          console.log("Captured asset (raw object):", asset); // Log raw asset object
+          let thumbnailUri: string | undefined = undefined;
+          if (asset.type === "video" && asset.uri) {
+            console.log(
+              `Attempting to generate thumbnail for video URI (camera): ${asset.uri}`
+            );
+            try {
+              const { uri: generatedThumbnailUri } =
+                await VideoThumbnails.getThumbnailAsync(
+                  // Corrected function name
+                  asset.uri,
+                  { time: 1000 } // Generate thumbnail at 1 second
+                );
+              thumbnailUri = generatedThumbnailUri;
+              console.log(`Generated thumbnail URI (camera): ${thumbnailUri}`);
+            } catch (e) {
+              console.warn(
+                "Could not generate thumbnail for video",
+                asset.uri,
+                e
+              );
+            }
+          }
           onAddMedia({
             uri: asset.uri,
             type: asset.type === "video" ? "video" : "image",
+            thumbnailUri,
           });
         } else {
-          console.log("Camera capture cancelled.");
+          console.log("Camera capture cancelled or no asset returned.");
         }
       } else {
         console.log("Camera permission denied or not determined.");
@@ -128,10 +182,25 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
         </TouchableOpacity>
         {media.map((item, index) => (
           <View key={index} style={styles.mediaItem}>
-            <Image source={{ uri: item.uri }} style={styles.mediaPreview} />
-            {item.type === "video" && (
-              <View style={styles.videoIndicator}>
-                <Video size={16} color="white" />
+            <Image
+              source={{
+                uri:
+                  item.type === "video" && item.thumbnailUri
+                    ? item.thumbnailUri
+                    : item.uri,
+              }}
+              style={styles.mediaPreview}
+            />
+            {item.type === "video" &&
+              !item.thumbnailUri && ( // Show video icon only if no thumbnail
+                <View style={styles.videoIndicator}>
+                  <Video size={16} color="white" />
+                </View>
+              )}
+            {/* Optionally, always show a small video icon even with thumbnail */}
+            {item.type === "video" && item.thumbnailUri && (
+              <View style={styles.videoIndicatorBottomLeft}>
+                <Video size={12} color="white" />
               </View>
             )}
             <TouchableOpacity
@@ -178,6 +247,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 8,
+    backgroundColor: COLORS.neutral[200], // Added a background color for loading/error states
   },
   videoIndicator: {
     position: "absolute",
@@ -186,6 +256,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 12,
     padding: 4,
+  },
+  videoIndicatorBottomLeft: {
+    // Style for the small video icon on thumbnails
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 8,
+    padding: 2,
   },
   removeButton: {
     position: "absolute",

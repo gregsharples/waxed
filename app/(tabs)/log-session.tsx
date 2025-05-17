@@ -52,7 +52,7 @@ export default function LogSessionScreen() {
   const [notes, setNotes] = useState("");
   const [rating, setRating] = useState(0);
   const [media, setMedia] = useState<
-    { uri: string; type: "image" | "video" }[]
+    { uri: string; type: "image" | "video"; thumbnailUri?: string }[] // Added thumbnailUri
   >([]);
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -114,6 +114,7 @@ export default function LogSessionScreen() {
   const handleAddMedia = (newMedia: {
     uri: string;
     type: "image" | "video";
+    thumbnailUri?: string; // Added thumbnailUri
   }) => {
     setMedia([...media, newMedia]);
   };
