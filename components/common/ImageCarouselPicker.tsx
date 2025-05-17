@@ -19,7 +19,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 export interface CarouselPickerOption {
   id: string;
   label: string;
-  imageUri: string; // Expecting a placeholder or actual image URI
+  imageUri: number; // Changed to number to accept require() result
   description?: string;
   metric?: string;
 }
@@ -81,7 +81,7 @@ export const ImageCarouselPicker: React.FC<ImageCarouselPickerProps> = ({
       activeOpacity={0.8}
     >
       <ImageBackground
-        source={{ uri: item.imageUri }} // Use the imageUri from the item
+        source={item.imageUri} // Use the imageUri directly for require()d assets
         style={styles.imageBackground}
         resizeMode="cover"
       >
@@ -112,14 +112,11 @@ export const ImageCarouselPicker: React.FC<ImageCarouselPickerProps> = ({
         onPressOut={onClose} // Close when tapping outside the sheet content
       >
         <TouchableOpacity activeOpacity={1} style={styles.sheetContainer}>
-          {" "}
           {/* Prevent backdrop press from triggering on content */}
           <View style={styles.sheetContent}>
             <View style={styles.header}>
               <Text style={styles.title}>{title}</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Done</Text>
-              </TouchableOpacity>
+              {/* Done button removed */}
             </View>
 
             <View style={styles.carouselContainer}>
@@ -134,8 +131,8 @@ export const ImageCarouselPicker: React.FC<ImageCarouselPickerProps> = ({
                       size={32}
                       color={
                         currentIndex === 0
-                          ? COLORS.neutral[300]
-                          : COLORS.primary[500]
+                          ? COLORS.neutral[400] // More visible disabled color
+                          : COLORS.core.sunsetCoral // Coral for active
                       }
                     />
                   </TouchableOpacity>
@@ -171,8 +168,8 @@ export const ImageCarouselPicker: React.FC<ImageCarouselPickerProps> = ({
                       size={32}
                       color={
                         currentIndex === options.length - 1
-                          ? COLORS.neutral[300]
-                          : COLORS.primary[500]
+                          ? COLORS.neutral[400] // More visible disabled color
+                          : COLORS.core.sunsetCoral // Coral for active
                       }
                     />
                   </TouchableOpacity>
@@ -219,14 +216,10 @@ const styles = StyleSheet.create({
   title: {
     ...TYPOGRAPHY.h2,
     color: COLORS.text.primary,
+    flex: 1, // Allow title to take available space if header is still space-between
+    textAlign: "center", // Center title now that Done button is gone
   },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    ...TYPOGRAPHY.buttonText,
-    color: COLORS.primary[600],
-  },
+  // closeButton and closeButtonText styles removed
   carouselContainer: {
     flex: 1,
     flexDirection: "row",
@@ -260,16 +253,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomLeftRadius: 16, // Match image borderRadius
     borderBottomRightRadius: 16, // Match image borderRadius
+    height: 80, // Fixed height for the overlay
+    justifyContent: "center", // Center content vertically
   },
   itemLabel: {
     ...TYPOGRAPHY.h3,
-    color: "white",
+    color: COLORS.core.waxWhite,
     fontWeight: "bold",
     marginBottom: 4,
+    textAlign: "left", // Align text to the left
   },
   itemDescription: {
-    ...TYPOGRAPHY.body,
-    color: "white",
+    ...TYPOGRAPHY.caption, // Smaller text for description
+    color: COLORS.core.waxWhite,
+    textAlign: "left", // Align text to the left
   },
   arrowButton: {
     position: "absolute",

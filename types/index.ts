@@ -30,7 +30,8 @@ export interface CrowdOption {
   id: string;
   label: string;
   iconName: string; // To store the name of the lucide icon (if used for a button UI)
-  imageUri: string; // Added for ImageCarouselPicker
+  imageUri: number; // Changed to number for require() result
+  description?: string; // Added for crowd descriptions
 }
 
 export interface MediaItem {
@@ -82,7 +83,7 @@ export interface WaveHeightOption {
   id: string;
   label: string; // e.g., "Ankle Biters"
   metric: string; // e.g., "< 0.3m"
-  imageUri: string; // Placeholder: "placeholder_wave_ankle_biters.png"
+  imageUri: number; // Changed to number for require() result
   description?: string; // Optional detailed description
 }
 
@@ -90,5 +91,5 @@ export interface WaveQualityOption {
   id: string;
   label: string; // e.g., "Blown Out"
   description: string; // e.g., "Total mess — strong wind, no shape"
-  imageUri: string; // Placeholder: "placeholder_quality_blown_out.png"
+  imageUri: number; // Changed to number for require() result
 }

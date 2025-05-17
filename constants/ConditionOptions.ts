@@ -22,31 +22,31 @@ export const WAVE_HEIGHT_OPTIONS: WaveHeightOption[] = [
   {
     id: "wh4",
     label: "Waist to Shoulder",
-    metric: "0.9 – 1.2m",
+    metric: "0.9 – 1.5m",
     imageUri: require("@/assets/images/conditions/wave-height-wh4.jpg"),
   },
   {
     id: "wh5",
     label: "Head High",
-    metric: "~1.5m",
+    metric: "~2m",
     imageUri: require("@/assets/images/conditions/wave-height-wh5.jpg"),
   },
   {
     id: "wh6",
     label: "Overhead (1.5x)",
-    metric: "1.5 – 2m",
+    metric: "2 – 3m",
     imageUri: require("@/assets/images/conditions/wave-height-wh6.jpg"),
   },
   {
     id: "wh7",
     label: "Double Overhead",
-    metric: "2 – 3m",
+    metric: "3 – 4m",
     imageUri: require("@/assets/images/conditions/wave-height-wh7.jpg"),
   },
   {
     id: "wh8",
     label: "Triple / Huge!",
-    metric: "3m+",
+    metric: "4m+",
     imageUri: require("@/assets/images/conditions/wave-height-wh8.jpg"),
   },
 ];
@@ -93,31 +93,36 @@ export const WAVE_QUALITY_OPTIONS: WaveQualityOption[] = [
 export const CROWD_OPTIONS: CrowdOption[] = [
   {
     id: "c1",
-    label: "Empty",
-    iconName: "Smile", // Retaining iconName in case it's useful for other UI later
+    label: "Soul Session",
+    description: "Just you and your mates",
+    iconName: "Smile",
     imageUri: require("@/assets/images/conditions/crowd-level-c1.jpg"),
   },
   {
     id: "c2",
-    label: "A few surfers",
+    label: "Uncrowded",
+    description: "A few others but waves for all",
     iconName: "User",
     imageUri: require("@/assets/images/conditions/crowd-level-c2.jpg"),
   },
   {
     id: "c3",
     label: "Manageable",
+    description: "Quite busy but well spread out",
     iconName: "Users",
-    imageUri: require("@/assets/images/conditions/crowd-level-c3.png"),
+    imageUri: require("@/assets/images/conditions/crowd-level-c3.jpg"),
   },
   {
     id: "c4",
     label: "Busy",
+    description: "Having to compete for waves",
     iconName: "Users",
     imageUri: require("@/assets/images/conditions/crowd-level-c4.jpg"),
   },
   {
     id: "c5",
     label: "Hectic",
+    description: "Lucky if you get a wave",
     iconName: "Frown",
     imageUri: require("@/assets/images/conditions/crowd-level-c5.jpg"),
   },

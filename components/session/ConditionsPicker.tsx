@@ -54,7 +54,7 @@ export const ConditionsPicker: React.FC<ConditionsPickerProps> = ({
       id: opt.id,
       label: opt.label,
       imageUri: opt.imageUri,
-      // No description or metric for crowd options
+      description: opt.description, // Pass the description
     }));
   };
 
