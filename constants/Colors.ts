@@ -90,5 +90,5 @@ export const COLORS = {
     disabled: "#90A4AE",
     hint: "#B0BEC5",
   },
-  background: "#F8F9FA",
+  background: "#fdf9f1",
 };
