@@ -27,6 +27,7 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
   onRemoveMedia,
 }) => {
   const handleAddMediaPress = () => {
+    console.log("handleAddMediaPress called. Showing alert...");
     Alert.alert(
       "Add Media",
       "Choose an option",
@@ -49,38 +50,69 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      onAddMedia({
-        uri: asset.uri,
-        type: asset.type === "video" ? "video" : "image",
-      });
-    }
-  };
-
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-
-    if (status === "granted") {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+    console.log("Attempting to pick image from library...");
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All, // Reverted: Not an array
         allowsEditing: true,
         quality: 1,
       });
+      console.log("Image library result:", JSON.stringify(result, null, 2));
 
       if (!result.canceled) {
         const asset = result.assets[0];
+        console.log("Selected asset:", JSON.stringify(asset, null, 2));
         onAddMedia({
           uri: asset.uri,
           type: asset.type === "video" ? "video" : "image",
         });
+      } else {
+        console.log("Image picking cancelled.");
       }
+    } catch (error) {
+      console.error("Error picking image:", error);
+    }
+  };
+
+  const takePhoto = async () => {
+    console.log("Attempting to take photo/video with camera...");
+    try {
+      console.log("Requesting camera permissions...");
+      const permissionResult =
+        await ImagePicker.requestCameraPermissionsAsync();
+      console.log(
+        "Camera permission result:",
+        JSON.stringify(permissionResult, null, 2)
+      );
+
+      if (permissionResult.status === "granted") {
+        console.log("Camera permission granted. Launching camera...");
+        const result = await ImagePicker.launchCameraAsync({
+          // mediaTypes: ImagePicker.MediaTypeOptions.Images, // Option removed to rely on default
+          allowsEditing: true,
+          quality: 1,
+        });
+        console.log("Camera launch result:", JSON.stringify(result, null, 2));
+
+        if (!result.canceled) {
+          const asset = result.assets[0];
+          console.log("Captured asset:", JSON.stringify(asset, null, 2));
+          onAddMedia({
+            uri: asset.uri,
+            type: asset.type === "video" ? "video" : "image",
+          });
+        } else {
+          console.log("Camera capture cancelled.");
+        }
+      } else {
+        console.log("Camera permission denied or not determined.");
+        Alert.alert(
+          "Permission Denied",
+          "Camera permission is required to take photos and videos."
+        );
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
     }
   };
 
