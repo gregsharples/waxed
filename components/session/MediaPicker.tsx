@@ -196,6 +196,7 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({
       if (permissionResult.status === "granted") {
         console.log("Camera permission granted. Launching camera...");
         const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ["images", "videos"] as any, // Use string array like for library
           allowsEditing: false,
           quality: 1,
         });
