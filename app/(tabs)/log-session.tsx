@@ -1,41 +1,46 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS } from '@/constants/Colors';
-import { TYPOGRAPHY } from '@/constants/Typography';
-import { Platform } from 'react-native';
-import { Slider } from '@react-native-community/slider';
-import { Droplet, Clock, MapPin, Wind, Thermometer } from 'lucide-react-native';
-import { MOCK_LOCATIONS } from '@/data/mockData';
-import { LocationPicker } from '@/components/session/LocationPicker';
-import { RatingPicker } from '@/components/session/RatingPicker';
+import { COLORS } from "@/constants/Colors";
+import { TYPOGRAPHY } from "@/constants/Typography";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import { Clock, Droplet, MapPin, Thermometer, Wind } from "lucide-react-native";
+import React, { useState } from "react";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LogSessionScreen() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [duration, setDuration] = useState(1);
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState("");
   const [waveHeight, setWaveHeight] = useState(0.5);
   const [windSpeed, setWindSpeed] = useState(5);
   const [temperature, setTemperature] = useState(20);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [overallRating, setOverallRating] = useState(3);
-  
+
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setDate(selectedDate);
     }
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
@@ -48,14 +53,14 @@ export default function LogSessionScreen() {
       windSpeed,
       temperature,
       notes,
-      overallRating
+      overallRating,
     });
     // This would normally save the data and navigate back
   };
-  
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView 
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -66,7 +71,7 @@ export default function LogSessionScreen() {
         <Animated.View entering={FadeInDown.delay(100).duration(500)}>
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Date & Time</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.datePickerButton}
               onPress={() => setShowDatePicker(true)}
             >
@@ -90,7 +95,7 @@ export default function LogSessionScreen() {
               <Text style={styles.sectionTitle}>Duration (hours)</Text>
             </View>
             <Text style={styles.sliderValue}>{duration.toFixed(1)} hours</Text>
-            <Slider
+            {/* <Slider
               style={styles.slider}
               minimumValue={0.5}
               maximumValue={5}
@@ -100,7 +105,8 @@ export default function LogSessionScreen() {
               minimumTrackTintColor={COLORS.primary[500]}
               maximumTrackTintColor={COLORS.neutral[200]}
               thumbTintColor={COLORS.primary[600]}
-            />
+            /> */}
+            <Text>Duration Slider Placeholder</Text>
           </View>
         </Animated.View>
 
@@ -110,11 +116,12 @@ export default function LogSessionScreen() {
               <MapPin size={20} color={COLORS.text.secondary} />
               <Text style={styles.sectionTitle}>Location</Text>
             </View>
-            <LocationPicker
+            {/* <LocationPicker
               locations={MOCK_LOCATIONS}
               selectedLocation={selectedLocation}
               onSelectLocation={setSelectedLocation}
-            />
+            /> */}
+            <Text>Location Picker Placeholder</Text>
           </View>
         </Animated.View>
 
@@ -125,7 +132,7 @@ export default function LogSessionScreen() {
               <Text style={styles.sectionTitle}>Wave Height (meters)</Text>
             </View>
             <Text style={styles.sliderValue}>{waveHeight.toFixed(1)} m</Text>
-            <Slider
+            {/* <Slider
               style={styles.slider}
               minimumValue={0.1}
               maximumValue={3}
@@ -135,7 +142,8 @@ export default function LogSessionScreen() {
               minimumTrackTintColor={COLORS.secondary[500]}
               maximumTrackTintColor={COLORS.neutral[200]}
               thumbTintColor={COLORS.secondary[600]}
-            />
+            /> */}
+            <Text>Wave Height Slider Placeholder</Text>
           </View>
         </Animated.View>
 
@@ -146,8 +154,10 @@ export default function LogSessionScreen() {
                 <Wind size={20} color={COLORS.text.secondary} />
                 <Text style={styles.sectionTitle}>Wind (km/h)</Text>
               </View>
-              <Text style={styles.sliderValue}>{windSpeed.toFixed(0)} km/h</Text>
-              <Slider
+              <Text style={styles.sliderValue}>
+                {windSpeed.toFixed(0)} km/h
+              </Text>
+              {/* <Slider
                 style={styles.slider}
                 minimumValue={0}
                 maximumValue={50}
@@ -157,7 +167,8 @@ export default function LogSessionScreen() {
                 minimumTrackTintColor={COLORS.accent[500]}
                 maximumTrackTintColor={COLORS.neutral[200]}
                 thumbTintColor={COLORS.accent[600]}
-              />
+              /> */}
+              <Text>Wind Speed Slider Placeholder</Text>
             </View>
 
             <View style={[styles.formSection, styles.halfWidth]}>
@@ -166,7 +177,7 @@ export default function LogSessionScreen() {
                 <Text style={styles.sectionTitle}>Temp (°C)</Text>
               </View>
               <Text style={styles.sliderValue}>{temperature.toFixed(0)}°C</Text>
-              <Slider
+              {/* <Slider
                 style={styles.slider}
                 minimumValue={0}
                 maximumValue={40}
@@ -176,7 +187,8 @@ export default function LogSessionScreen() {
                 minimumTrackTintColor={COLORS.warning[500]}
                 maximumTrackTintColor={COLORS.neutral[200]}
                 thumbTintColor={COLORS.warning[600]}
-              />
+              /> */}
+              <Text>Temperature Slider Placeholder</Text>
             </View>
           </View>
         </Animated.View>
@@ -184,7 +196,8 @@ export default function LogSessionScreen() {
         <Animated.View entering={FadeInDown.delay(600).duration(500)}>
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Overall Experience</Text>
-            <RatingPicker rating={overallRating} onRatingChange={setOverallRating} />
+            {/* <RatingPicker rating={overallRating} onRatingChange={setOverallRating} /> */}
+            <Text>Rating Picker Placeholder</Text>
           </View>
         </Animated.View>
 
@@ -231,24 +244,24 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
   },
   formSection: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   formRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
   },
   halfWidth: {
-    width: '48%',
+    width: "48%",
   },
   sectionTitle: {
     ...TYPOGRAPHY.h3,
@@ -256,15 +269,15 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   inputHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   datePickerButton: {
     paddingVertical: 12,
     borderRadius: 8,
     backgroundColor: COLORS.neutral[100],
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   dateText: {
@@ -272,13 +285,13 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
   },
   slider: {
-    width: '100%',
+    width: "100%",
     height: 40,
   },
   sliderValue: {
     ...TYPOGRAPHY.body,
     color: COLORS.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 8,
   },
   notesInput: {
@@ -297,10 +310,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginHorizontal: 16,
     marginTop: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   submitButtonText: {
     ...TYPOGRAPHY.buttonText,
-    color: 'white',
+    color: "white",
   },
 });
