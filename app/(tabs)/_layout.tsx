@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // Define the custom button component here, before TabLayout
 const CustomLogButton = (props: BottomTabBarButtonProps) => {
   const { children, onPress } = props;
-  const buttonDiameter = 56; // Fixed size for the floating circle
+  const buttonDiameter = 64; // Increased size for the floating circle
 
   return (
     <TouchableOpacity
@@ -33,7 +33,7 @@ const CustomLogButton = (props: BottomTabBarButtonProps) => {
           width: buttonDiameter,
           height: buttonDiameter,
           borderRadius: buttonDiameter / 2,
-          backgroundColor: COLORS.core.waxWhite,
+          backgroundColor: COLORS.core.sunsetCoral,
           justifyContent: "center",
           alignItems: "center",
           shadowColor: COLORS.core.boardBlack,
@@ -96,7 +96,7 @@ export default function TabLayout() {
             const plusIconSize = size + 12;
             return (
               <PlusCircle
-                color={COLORS.core.midnightSurf}
+                color={COLORS.core.waxWhite} // Changed icon color for contrast
                 size={plusIconSize}
               />
             );
