@@ -8,7 +8,7 @@ import {
   CirclePlus as PlusCircle,
   User,
 } from "lucide-react-native";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Define the custom button component here, before TabLayout
@@ -44,7 +44,11 @@ const CustomLogButton = (props: BottomTabBarButtonProps) => {
           zIndex: 1, // Ensure it's above the tab bar
         }}
       >
-        {children} {/* This renders the <PlusCircle /> icon */}
+        {typeof children === "string" ? (
+          <Text style={{ color: COLORS.core.waxWhite }}>{children}</Text>
+        ) : (
+          children
+        )}
       </View>
     </TouchableOpacity>
   );
