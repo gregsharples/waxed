@@ -134,10 +134,8 @@ export default function LogSessionScreen() {
 
         <Animated.View entering={FadeInDown.delay(100).duration(500)}>
           <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              {/* Icon for the card itself, can be different from date/time icons */}
-              <Clock size={20} color={COLORS.primary[600]} />
-              <Text style={styles.cardTitle}>When did you surf?</Text>
+            <View style={styles.customCardHeader}>
+              <Text style={styles.customCardTitle}>Time and Duration</Text>
             </View>
             <View style={styles.dateTimeRow}>
               <TouchableOpacity
@@ -455,16 +453,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  customCardHeader: {
+    // New style for the "Time and Duration" header
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4, // Further reduced margin
+  },
   cardTitle: {
     ...TYPOGRAPHY.subtitle, // Changed from h3 to subtitle
     color: COLORS.text.primary,
-    marginLeft: 8,
+    marginLeft: 8, // For headers with icons
+  },
+  customCardTitle: {
+    // New style for the "Time and Duration" title (no icon, so no marginLeft)
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text.primary,
   },
   dateTimeRow: {
     flexDirection: "column", // Changed to column
     alignItems: "stretch", // Stretch items to fill width
-    marginTop: 8,
-    paddingVertical: 8, // Adjusted padding
+    marginTop: 4, // Reduced top margin
+    paddingTop: 8, // Keep top padding
+    paddingBottom: 4, // Reduce bottom padding to make space below duration picker smaller
     paddingHorizontal: 0, // No horizontal padding needed if items stretch
     borderRadius: 8,
     // borderWidth: 1, // Removed border
