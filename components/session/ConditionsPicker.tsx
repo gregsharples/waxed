@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, // Matched from dateTimeItem. The card's padding provides outer spacing.
     // backgroundColor: COLORS.neutral[100], // Ensure no background
     borderRadius: 8, // Retain for touch feedback area if desired, though not strictly for visual match if items are full width
-    marginBottom: 12, // Spacing between picker buttons
+    // marginBottom: 12, // Removed to reduce spacing
     // borderBottomWidth: 1, // Removed border
     // borderBottomColor: COLORS.neutral[200], // Removed border
   },
