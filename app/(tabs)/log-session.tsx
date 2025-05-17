@@ -116,11 +116,11 @@ export default function LogSessionScreen() {
     type: "image" | "video";
     thumbnailUri?: string; // Added thumbnailUri
   }) => {
-    setMedia([...media, newMedia]);
+    setMedia((prevMedia) => [...prevMedia, newMedia]); // Use functional update
   };
 
   const handleRemoveMedia = (uri: string) => {
-    setMedia(media.filter((item) => item.uri !== uri));
+    setMedia((prevMedia) => prevMedia.filter((item) => item.uri !== uri)); // Use functional update
   };
 
   const handleSubmit = () => {
