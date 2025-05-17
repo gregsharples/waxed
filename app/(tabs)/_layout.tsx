@@ -1,4 +1,5 @@
 import { COLORS } from "@/constants/Colors";
+import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import {
   ChartBar as BarChart2,
@@ -7,8 +8,47 @@ import {
   CirclePlus as PlusCircle,
   User,
 } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Define the custom button component here, before TabLayout
+const CustomLogButton = (props: BottomTabBarButtonProps) => {
+  const { children, onPress } = props;
+  const buttonDiameter = 56; // Fixed size for the floating circle
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+      activeOpacity={0.8}
+    >
+      <View
+        style={{
+          position: "absolute",
+          top: -22, // Adjust for floating effect (pulls the button up)
+          width: buttonDiameter,
+          height: buttonDiameter,
+          borderRadius: buttonDiameter / 2,
+          backgroundColor: COLORS.core.waxWhite,
+          justifyContent: "center",
+          alignItems: "center",
+          shadowColor: COLORS.core.boardBlack,
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+          elevation: 7, // For Android shadow
+          zIndex: 1, // Ensure it's above the tab bar
+        }}
+      >
+        {children} {/* This renders the <PlusCircle /> icon */}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -49,12 +89,19 @@ export default function TabLayout() {
       <Tabs.Screen
         name="log-session"
         options={{
-          title: "Log",
-          tabBarIcon: ({ color, size }) => (
-            <View style={styles.addButtonContainer}>
-              <PlusCircle color={COLORS.core.midnightSurf} size={size + 12} />
-            </View>
-          ),
+          title: "Log", // Remains for accessibility
+          tabBarLabel: () => null, // Explicitly hide the label text
+          tabBarIcon: ({ size }) => {
+            // Make the PlusCircle icon larger than standard tab icons
+            const plusIconSize = size + 12;
+            return (
+              <PlusCircle
+                color={COLORS.core.midnightSurf}
+                size={plusIconSize}
+              />
+            );
+          },
+          tabBarButton: (props) => <CustomLogButton {...props} />,
         }}
       />
       <Tabs.Screen
@@ -78,17 +125,6 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  addButtonContainer: {
-    top: -10,
-    backgroundColor: COLORS.core.waxWhite,
-    borderRadius: 30,
-    padding: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
-  },
   tabBarLabel: {
     fontFamily: "Inter-SemiBold",
     fontSize: 12,
