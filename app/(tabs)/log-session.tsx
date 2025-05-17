@@ -1,6 +1,7 @@
 import { ConditionsPicker } from "@/components/session/ConditionsPicker"; // Import ConditionsPicker
 import { LocationPicker } from "@/components/session/LocationPicker";
 import { MediaPicker } from "@/components/session/MediaPicker";
+import { RatingPicker } from "@/components/session/RatingPicker"; // Added RatingPicker
 import { COLORS } from "@/constants/Colors";
 import { TYPOGRAPHY } from "@/constants/Typography";
 import { CrowdOption, WaveHeightOption, WaveQualityOption } from "@/types"; // Import types
@@ -9,7 +10,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 // import Slider from "@react-native-community/slider"; // No longer needed for wave height
 import { Picker } from "@react-native-picker/picker";
-import { CalendarDays, Clock, MapPin, Star } from "lucide-react-native";
+import { CalendarDays, Clock, MapPin } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Modal,
@@ -383,46 +384,27 @@ export default function LogSessionScreen() {
         <Animated.View entering={FadeInDown.delay(400).duration(500)}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Star size={20} color={COLORS.primary[600]} />
-              <Text style={styles.cardTitle}>How was your session?</Text>
+              {/* Star icon removed */}
+              <Text style={styles.cardTitleNoIcon}>Session Review</Text>
             </View>
-            <View style={styles.ratingContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => setRating(star)}
-                  style={styles.starButton}
-                >
-                  <Star
-                    size={32}
-                    color={
-                      star <= rating ? COLORS.accent[500] : COLORS.neutral[300]
-                    }
-                    fill={star <= rating ? COLORS.accent[500] : "transparent"}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.ratingText}>
-              {rating === 0
-                ? "Tap to rate your session"
-                : rating === 1
-                ? "Poor"
-                : rating === 2
-                ? "Fair"
-                : rating === 3
-                ? "Good"
-                : rating === 4
-                ? "Great"
-                : "Excellent"}
-            </Text>
+            <RatingPicker rating={rating} onRatingChange={setRating} />
+            <TextInput
+              style={[styles.notesInput, { marginTop: 16 }]} // Added marginTop to notesInput
+              multiline
+              numberOfLines={4}
+              placeholder="Add any notes about your session..."
+              value={notes}
+              onChangeText={setNotes}
+              textAlignVertical="top"
+            />
           </View>
         </Animated.View>
 
+        {/* The original Notes card is removed, so the delay for Add Photos & Videos needs to be adjusted */}
         <Animated.View entering={FadeInDown.delay(500).duration(500)}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Add Photos & Videos</Text>
+              <Text style={styles.cardTitleNoIcon}>Add Photos & Videos</Text>
             </View>
             <MediaPicker
               media={media}
@@ -432,24 +414,10 @@ export default function LogSessionScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(600).duration(500)}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Notes</Text>
-            </View>
-            <TextInput
-              style={styles.notesInput}
-              multiline
-              numberOfLines={4}
-              placeholder="What did you learn? How did it go?"
-              value={notes}
-              onChangeText={setNotes}
-              textAlignVertical="top"
-            />
-          </View>
-        </Animated.View>
+        {/* Original Notes card removed */}
 
-        <Animated.View entering={FadeInDown.delay(700).duration(500)}>
+        {/* Delay for submit button needs to be adjusted */}
+        <Animated.View entering={FadeInDown.delay(600).duration(500)}>
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
             <Text style={styles.submitButtonText}>Save Session</Text>
           </TouchableOpacity>
@@ -491,7 +459,7 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8, // Reduced marginBottom from 16 to 8
   },
   customCardHeader: {
     // New style for the "Time and Duration" header
@@ -503,6 +471,12 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.subtitle, // Changed from h3 to subtitle
     color: COLORS.text.primary,
     marginLeft: 8, // For headers with icons
+  },
+  cardTitleNoIcon: {
+    // New style for card titles without an icon
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text.primary,
+    // No marginLeft as there's no icon
   },
   customCardTitle: {
     // New style for the "Time and Duration" title (no icon, so no marginLeft)
