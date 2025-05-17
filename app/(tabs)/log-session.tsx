@@ -6,9 +6,16 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import Slider from "@react-native-community/slider";
-import { Clock, Droplet, MapPin, Star } from "lucide-react-native";
+import {
+  CalendarDays,
+  Clock,
+  Droplet,
+  MapPin,
+  Star,
+} from "lucide-react-native";
 import React, { useState } from "react";
 import {
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -22,12 +29,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LogSessionScreen() {
   const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false); // This will be reused for the inline picker on iOS
+  const [showDatePickerSheet, setShowDatePickerSheet] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date()); // For date picker sheet
   const [duration, setDuration] = useState(1);
+  const [showDurationPickerSheet, setShowDurationPickerSheet] = useState(false);
+  const [tempDuration, setTempDuration] = useState(1); // For duration picker sheet
   const [selectedLocation, setSelectedLocation] = useState("");
   const [waveHeight, setWaveHeight] = useState(0.5);
-  const [windSpeed, setWindSpeed] = useState(5);
-  const [temperature, setTemperature] = useState(20);
   const [notes, setNotes] = useState("");
   const [rating, setRating] = useState(0);
   const [media, setMedia] = useState<
@@ -35,10 +44,24 @@ export default function LogSessionScreen() {
   >([]);
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setDate(selectedDate);
+    const currentDate = selectedDate || date;
+    setShowDatePicker(Platform.OS === "ios"); // Keep for inline iOS date picker if needed elsewhere
+    setTempDate(currentDate); // Update tempDate for the sheet
+    if (Platform.OS !== "ios") {
+      // For Android, the picker closes itself
+      // setDate(currentDate); // Optionally update immediately on Android
+      // setShowDatePickerSheet(false); // Or close sheet after selection
     }
+  };
+
+  const handleConfirmDate = () => {
+    setDate(tempDate);
+    setShowDatePickerSheet(false);
+  };
+
+  const handleConfirmDuration = () => {
+    setDuration(tempDuration);
+    setShowDurationPickerSheet(false);
   };
 
   const formatDate = (date: Date) => {
@@ -68,8 +91,6 @@ export default function LogSessionScreen() {
       duration,
       selectedLocation,
       waveHeight,
-      windSpeed,
-      temperature,
       notes,
       rating,
       media,
@@ -89,38 +110,127 @@ export default function LogSessionScreen() {
         <Animated.View entering={FadeInDown.delay(100).duration(500)}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
+              {/* Icon for the card itself, can be different from date/time icons */}
               <Clock size={20} color={COLORS.primary[600]} />
               <Text style={styles.cardTitle}>When did you surf?</Text>
             </View>
-            <TouchableOpacity
-              style={styles.datePickerButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateText}>{formatDate(date)}</Text>
-            </TouchableOpacity>
+            <View style={styles.dateTimeRow}>
+              <TouchableOpacity
+                style={styles.dateTimeItem}
+                onPress={() => {
+                  setTempDate(date); // Initialize tempDate with current date
+                  setShowDatePickerSheet(true);
+                }}
+              >
+                <CalendarDays
+                  size={18}
+                  color={COLORS.text.secondary}
+                  style={styles.iconStyle}
+                />
+                <Text style={styles.dateTimeText}>{formatDate(date)}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dateTimeItem}
+                onPress={() => {
+                  setTempDuration(duration); // Initialize tempDuration with current duration
+                  setShowDurationPickerSheet(true);
+                }}
+              >
+                <Clock
+                  size={18}
+                  color={COLORS.text.secondary}
+                  style={styles.iconStyle}
+                />
+                <Text style={styles.dateTimeText}>
+                  {duration.toFixed(1)} hours
+                </Text>
+              </TouchableOpacity>
+            </View>
             {showDatePicker && (
               <DateTimePicker
                 value={date}
                 mode="date"
                 display="default"
                 onChange={onDateChange}
+                // display={Platform.OS === "ios" ? "spinner" : "default"} // spinner can be good for sheets
               />
             )}
-            <View style={styles.durationContainer}>
-              <Text style={styles.label}>Session Duration</Text>
-              <Text style={styles.value}>{duration.toFixed(1)} hours</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={0.5}
-                maximumValue={5}
-                step={0.5}
-                value={duration}
-                onValueChange={setDuration}
-                minimumTrackTintColor={COLORS.primary[500]}
-                maximumTrackTintColor={COLORS.neutral[200]}
-                thumbTintColor={COLORS.primary[600]}
-              />
-            </View>
+            {/* Date Picker Modal/Sheet */}
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={showDatePickerSheet}
+              onRequestClose={() => setShowDatePickerSheet(false)}
+            >
+              <View style={styles.sheetContainer}>
+                <View style={styles.sheetContent}>
+                  <Text style={styles.sheetTitle}>Select Date</Text>
+                  {Platform.OS === "android" && (
+                    // Android DateTimePicker is a dialog, so we show it when sheet is visible
+                    // and it will overlay. For a more integrated look, custom component needed.
+                    // This re-uses the existing logic for Android.
+                    <DateTimePicker
+                      value={tempDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        onDateChange(event, selectedDate);
+                        // For Android, picker closes on selection, so we might auto-confirm or require "Done"
+                        if (selectedDate) setTempDate(selectedDate); // Update tempDate
+                      }}
+                    />
+                  )}
+                  {Platform.OS === "ios" && (
+                    <DateTimePicker
+                      value={tempDate}
+                      mode="date"
+                      display="spinner" // Spinner is better for sheets on iOS
+                      onChange={onDateChange}
+                      style={styles.iosPickerStyle}
+                    />
+                  )}
+                  <TouchableOpacity
+                    style={styles.sheetButton}
+                    onPress={handleConfirmDate}
+                  >
+                    <Text style={styles.sheetButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+            {/* Duration Picker Modal/Sheet */}
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={showDurationPickerSheet}
+              onRequestClose={() => setShowDurationPickerSheet(false)}
+            >
+              <View style={styles.sheetContainer}>
+                <View style={styles.sheetContent}>
+                  <Text style={styles.sheetTitle}>Select Duration</Text>
+                  <Text style={styles.value}>
+                    {tempDuration.toFixed(1)} hours
+                  </Text>
+                  <Slider
+                    style={styles.slider} // Ensure slider style is applied
+                    minimumValue={0.5}
+                    maximumValue={5}
+                    step={0.5}
+                    value={tempDuration}
+                    onValueChange={setTempDuration}
+                    minimumTrackTintColor={COLORS.primary[500]}
+                    maximumTrackTintColor={COLORS.neutral[200]}
+                    thumbTintColor={COLORS.primary[600]}
+                  />
+                  <TouchableOpacity
+                    style={styles.sheetButton}
+                    onPress={handleConfirmDuration}
+                  >
+                    <Text style={styles.sheetButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
           </View>
         </Animated.View>
 
@@ -158,40 +268,6 @@ export default function LogSessionScreen() {
                 maximumTrackTintColor={COLORS.neutral[200]}
                 thumbTintColor={COLORS.secondary[600]}
               />
-            </View>
-
-            <View style={styles.conditionsRow}>
-              <View style={[styles.conditionItem, styles.halfWidth]}>
-                <Text style={styles.label}>Wind Speed</Text>
-                <Text style={styles.value}>{windSpeed.toFixed(0)} km/h</Text>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={0}
-                  maximumValue={50}
-                  step={1}
-                  value={windSpeed}
-                  onValueChange={setWindSpeed}
-                  minimumTrackTintColor={COLORS.accent[500]}
-                  maximumTrackTintColor={COLORS.neutral[200]}
-                  thumbTintColor={COLORS.accent[600]}
-                />
-              </View>
-
-              <View style={[styles.conditionItem, styles.halfWidth]}>
-                <Text style={styles.label}>Temperature</Text>
-                <Text style={styles.value}>{temperature.toFixed(0)}°C</Text>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={0}
-                  maximumValue={40}
-                  step={1}
-                  value={temperature}
-                  onValueChange={setTemperature}
-                  minimumTrackTintColor={COLORS.warning[500]}
-                  maximumTrackTintColor={COLORS.neutral[200]}
-                  thumbTintColor={COLORS.warning[600]}
-                />
-              </View>
             </View>
           </View>
         </Animated.View>
@@ -310,25 +386,49 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    ...TYPOGRAPHY.h3,
+    ...TYPOGRAPHY.subtitle, // Changed from h3 to subtitle
     color: COLORS.text.primary,
     marginLeft: 8,
   },
-  datePickerButton: {
+  dateTimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-around", // Or 'space-between'
+    alignItems: "center",
+    marginTop: 8, // Add some margin if needed
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10, // Adjust padding as needed
     backgroundColor: COLORS.neutral[100],
     borderRadius: 8,
+  },
+  dateTimeItem: {
+    flexDirection: "row",
     alignItems: "center",
   },
-  dateText: {
+  iconStyle: {
+    marginRight: 6,
+  },
+  dateTimeText: {
     ...TYPOGRAPHY.body,
     color: COLORS.text.primary,
   },
-  durationContainer: {
-    marginTop: 16,
-  },
+  // Removed datePickerButton, dateText, durationContainer, label, value, slider styles as they are being refactored
+  // label: { // Kept for other cards, ensure it's not removed if used elsewhere
+  //   ...TYPOGRAPHY.subtitle,
+  //   color: COLORS.text.secondary,
+  //   marginBottom: 8,
+  // },
+  // value: { // Kept for other cards
+  //   ...TYPOGRAPHY.body,
+  //   color: COLORS.text.primary,
+  //   textAlign: "center",
+  //   marginBottom: 8,
+  // },
+  // slider: { // Kept for other cards
+  //   width: "100%",
+  //   height: 40,
+  // },
   label: {
+    // Copied from original for other cards that might use it
     ...TYPOGRAPHY.subtitle,
     color: COLORS.text.secondary,
     marginBottom: 8,
@@ -385,6 +485,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   submitButtonText: {
+    ...TYPOGRAPHY.buttonText,
+    color: "white",
+  },
+  sheetContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  sheetContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    alignItems: "center", // Center title and button
+  },
+  sheetTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text.primary,
+    marginBottom: 20,
+  },
+  iosPickerStyle: {
+    width: "100%", // Ensure picker takes full width
+    height: 200, // Adjust height as needed
+  },
+  sheetButton: {
+    backgroundColor: COLORS.primary[600],
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    marginTop: 20,
+    width: "100%", // Make button full width
+    alignItems: "center",
+  },
+  sheetButtonText: {
     ...TYPOGRAPHY.buttonText,
     color: "white",
   },
