@@ -40,6 +40,8 @@ export default function LogSessionScreen() {
     Math.round((duration % 1) * 60)
   );
   const [selectedLocation, setSelectedLocation] = useState("");
+  const [showLocationPickerSheet, setShowLocationPickerSheet] = useState(false);
+  const [tempSelectedLocation, setTempSelectedLocation] = useState(""); // For location picker sheet
   const [waveHeight, setWaveHeight] = useState(0.5);
   const [notes, setNotes] = useState("");
   const [rating, setRating] = useState(0);
@@ -67,6 +69,11 @@ export default function LogSessionScreen() {
     const totalHours = tempHours + tempMinutes / 60;
     setDuration(totalHours);
     setShowDurationPickerSheet(false);
+  };
+
+  const handleConfirmLocation = () => {
+    setSelectedLocation(tempSelectedLocation);
+    setShowLocationPickerSheet(false);
   };
 
   const formatDuration = (totalHours: number) => {
@@ -135,7 +142,7 @@ export default function LogSessionScreen() {
         <Animated.View entering={FadeInDown.delay(100).duration(500)}>
           <View style={styles.card}>
             <View style={styles.customCardHeader}>
-              <Text style={styles.customCardTitle}>Time and Duration</Text>
+              <Text style={styles.customCardTitle}>Session Details</Text>
             </View>
             <View style={styles.dateTimeRow}>
               <TouchableOpacity
@@ -167,6 +174,23 @@ export default function LogSessionScreen() {
                 />
                 <Text style={styles.dateTimeText}>
                   {formatDuration(duration)}
+                </Text>
+              </TouchableOpacity>
+              {/* Location Picker Trigger */}
+              <TouchableOpacity
+                style={styles.dateTimeItem}
+                onPress={() => {
+                  setTempSelectedLocation(selectedLocation); // Initialize temp location
+                  setShowLocationPickerSheet(true);
+                }}
+              >
+                <MapPin
+                  size={18}
+                  color={COLORS.text.secondary}
+                  style={styles.iconStyle}
+                />
+                <Text style={styles.dateTimeText}>
+                  {selectedLocation || "Select Location"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -299,23 +323,45 @@ export default function LogSessionScreen() {
                 </View>
               </View>
             </Modal>
+            {/* Location Picker Modal/Sheet */}
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={showLocationPickerSheet}
+              onRequestClose={() => setShowLocationPickerSheet(false)}
+            >
+              <View style={styles.sheetContainer}>
+                <View style={styles.locationSheetContent}>
+                  {" "}
+                  {/* Changed style name for specific layout */}
+                  <Text style={styles.sheetTitle}>Select Location</Text>
+                  <View style={styles.pickerWrapper}>
+                    <LocationPicker
+                      selectedLocation={tempSelectedLocation}
+                      onSelectLocation={setTempSelectedLocation}
+                    />
+                  </View>
+                  {tempSelectedLocation ? (
+                    <Text style={styles.currentSelectionText}>
+                      Selected Location: {tempSelectedLocation}
+                    </Text>
+                  ) : null}
+                  <TouchableOpacity
+                    style={styles.sheetButton}
+                    onPress={handleConfirmLocation}
+                  >
+                    <Text style={styles.sheetButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
           </View>
         </Animated.View>
+
+        {/* LocationPicker component is now inside a modal/sheet triggered from Session Details card */}
+        {/* The old "Where did you surf?" card has been removed */}
 
         <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MapPin size={20} color={COLORS.primary[600]} />
-              <Text style={styles.cardTitle}>Where did you surf?</Text>
-            </View>
-            <LocationPicker
-              selectedLocation={selectedLocation}
-              onSelectLocation={setSelectedLocation}
-            />
-          </View>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(300).duration(500)}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Droplet size={20} color={COLORS.primary[600]} />
@@ -580,11 +626,39 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   sheetContent: {
+    // General sheet content style
     backgroundColor: "white",
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20, // Bottom padding for button
+    paddingTop: 20, // Reduced top padding, title will have its own margin
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    alignItems: "center", // Center title and button
+    alignItems: "center",
+    // height: "auto", // Let content define height for date/duration pickers
+  },
+  locationSheetContent: {
+    // Specific style for location picker sheet
+    backgroundColor: "white",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: "90%",
+    flexDirection: "column", // To arrange items vertically
+    justifyContent: "space-between", // Push button to bottom
+  },
+  pickerWrapper: {
+    flex: 1, // Allows LocationPicker to take available space
+    width: "100%", // Ensure LocationPicker spans width
+    marginBottom: 10, // Space before current selection text or button
+  },
+  currentSelectionText: {
+    ...TYPOGRAPHY.body, // Made more prominent
+    color: COLORS.core.boardBlack, // Changed to boardBlack
+    textAlign: "center",
+    marginBottom: 10,
+    fontWeight: "500", // Added some weight
   },
   sheetTitle: {
     ...TYPOGRAPHY.h3,
