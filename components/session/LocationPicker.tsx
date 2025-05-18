@@ -1,9 +1,8 @@
 import { COLORS } from "@/constants/Colors";
 import { TYPOGRAPHY } from "@/constants/Typography";
 import { supabase } from "@/lib/supabase";
-import * as Location from "expo-location";
-import { Check, Crosshair, Search } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Check, Search } from "lucide-react-native";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   SectionList,
@@ -13,21 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, Region } from "react-native-maps";
-
-interface SpotData {
-  id: string;
-  name: string; // Corresponds to spot_name from DB
-  lat: number;
-  lng: number;
-  isFavorite: boolean;
-  continent?: string;
-  country?: string;
-  region?: string;
-  area?: string;
-  type?: string;
-  category?: string;
-}
 
 interface DisplayItem {
   name: string;
@@ -40,15 +24,6 @@ interface DisplayItem {
 interface Section {
   title: string;
   data: DisplayItem[];
-}
-
-// Interface for items that are definitely spots and can be shown on the map
-interface MappableSpot {
-  name: string;
-  isCategory: false;
-  id: string;
-  lat: number;
-  lng: number;
 }
 
 interface LocationPickerProps {
@@ -73,15 +48,6 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
-  const [currentUserLocation, setCurrentUserLocation] =
-    useState<Location.LocationObject | null>(null);
-  const [activeTab, setActiveTab] = useState<"list" | "map">("list");
-  const mapViewRef = useRef<MapView>(null);
-
-  // Map viewport state
-  const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
-  const [isMapReady, setIsMapReady] = useState(false);
-
   // Hierarchical navigation state
   const [hierarchy, setHierarchy] = useState<{
     continents: string[];
@@ -98,26 +64,6 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
   const [sectionTitle, setSectionTitle] = useState("Continents");
-
-  // For map view
-  const [visibleSpots, setVisibleSpots] = useState<MappableSpot[]>([]);
-
-  // Get user location
-  useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === "granted") {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          setCurrentUserLocation(location);
-        }
-      } catch (error) {
-        console.error("Error getting user location:", error);
-      }
-    })();
-  }, []);
 
   // Initial fetch for continents
   useEffect(() => {
@@ -226,16 +172,6 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
               .sort((a, b) => a.name.localeCompare(b.name));
 
             setDisplayItems(spotsData);
-
-            // For map view
-            const mappableSpots = spotsData.filter(
-              (item): item is MappableSpot =>
-                !item.isCategory &&
-                typeof item.id === "string" &&
-                typeof item.lat === "number" &&
-                typeof item.lng === "number"
-            );
-            setVisibleSpots(mappableSpots);
           } else {
             // Extract unique values for the current field
             const fieldToSelect =
@@ -462,27 +398,15 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
           setDisplayItems(searchResults);
           setSectionTitle(`Results for "${searchQuery}"`);
-
-          // Update visible spots for map view
-          const mappableSpots = searchResults.filter(
-            (item): item is MappableSpot =>
-              !item.isCategory &&
-              typeof item.id === "string" &&
-              typeof item.lat === "number" &&
-              typeof item.lng === "number"
-          );
-          setVisibleSpots(mappableSpots);
         } else {
           setDisplayItems([]);
           setSectionTitle(`No results for "${searchQuery}"`);
-          setVisibleSpots([]);
         }
       } catch (error) {
         console.error("Error during search:", error);
         setLoadingError(`Search failed. Please try again.`);
         setDisplayItems([]);
         setSectionTitle(`Error searching for "${searchQuery}"`);
-        setVisibleSpots([]);
       } finally {
         setIsLoading(false);
       }
@@ -520,119 +444,6 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
     return () => clearTimeout(debounceTimeout);
   }, [searchQuery, currentPath, fetchHierarchyLevel]);
-
-  // This function handles loading spots within the current map viewport
-  const loadSpotsInViewport = useCallback(
-    async (region: Region) => {
-      if (!isMapReady) return;
-
-      setIsLoading(true);
-      setLoadingError(null);
-
-      try {
-        // Calculate the boundaries with some padding
-        const latDelta = region.latitudeDelta;
-        const lngDelta = region.longitudeDelta;
-
-        const minLat = region.latitude - latDelta / 2;
-        const maxLat = region.latitude + latDelta / 2;
-        const minLng = region.longitude - lngDelta / 2;
-        const maxLng = region.longitude + lngDelta / 2;
-
-        // Query spots within these boundaries
-        const { data, error } = await supabase
-          .from("spots")
-          .select("id, spot_name, latitude, longitude")
-          .gte("latitude", minLat)
-          .lte("latitude", maxLat)
-          .gte("longitude", minLng)
-          .lte("longitude", maxLng)
-          .limit(200); // Reasonable limit to prevent overloading
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          const mappableSpots: MappableSpot[] = data.map((spot: any) => ({
-            name: spot.spot_name,
-            isCategory: false as const, // Use const assertion to ensure type is 'false' not 'boolean'
-            id: spot.id.toString(),
-            lat: spot.latitude,
-            lng: spot.longitude,
-          }));
-
-          setVisibleSpots(mappableSpots);
-        } else {
-          setVisibleSpots([]);
-        }
-      } catch (error) {
-        console.error("Error loading spots in viewport:", error);
-        // Only show error on map overlay if needed
-        setVisibleSpots([]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [isMapReady]
-  );
-
-  // Add debouncing to prevent excessive API calls
-  const handleRegionChangeComplete = useCallback((region: Region) => {
-    setCurrentRegion(region);
-    // We won't call loadSpotsInViewport directly, instead rely on the effect
-  }, []);
-
-  // Separate the API call with debouncing to prevent excessive refreshes
-  useEffect(() => {
-    if (!currentRegion) return;
-
-    const timer = setTimeout(() => {
-      loadSpotsInViewport(currentRegion);
-    }, 500); // Debounce for 500ms
-
-    return () => clearTimeout(timer);
-  }, [currentRegion, loadSpotsInViewport]);
-
-  // When switching to map tab, center on selected spot or user's location
-  useEffect(() => {
-    if (activeTab === "map" && mapViewRef.current && isMapReady) {
-      // If a spot is selected, center on it
-      const selectedSpot = visibleSpots.find(
-        (spot) => spot.name === selectedLocation
-      );
-
-      if (selectedSpot) {
-        mapViewRef.current.animateToRegion(
-          {
-            latitude: selectedSpot.lat,
-            longitude: selectedSpot.lng,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          },
-          500
-        );
-      } else if (currentRegion) {
-        // Already have a region, keep it
-      } else if (currentUserLocation) {
-        // Fall back to user location
-        mapViewRef.current.animateToRegion(
-          {
-            latitude: currentUserLocation.coords.latitude,
-            longitude: currentUserLocation.coords.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          },
-          500
-        );
-      }
-    }
-  }, [
-    activeTab,
-    currentUserLocation,
-    selectedLocation,
-    visibleSpots,
-    currentRegion,
-    isMapReady,
-  ]);
 
   const getSectionedData = (): Section[] => {
     return [{ title: sectionTitle, data: displayItems }];
@@ -674,20 +485,6 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     }
   );
   ListItem.displayName = "ListItem";
-
-  const goToCurrentUserLocation = useCallback(() => {
-    if (mapViewRef.current && currentUserLocation) {
-      mapViewRef.current.animateToRegion(
-        {
-          latitude: currentUserLocation.coords.latitude,
-          longitude: currentUserLocation.coords.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.002,
-        },
-        1000
-      );
-    }
-  }, [currentUserLocation]);
 
   const listOrLoadingIndicator = () => {
     if (isLoading) {
@@ -746,7 +543,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     return (
       <View style={styles.listWithHeaderContainer}>
         {currentPath.length > 0 || searchQuery ? (
-          <View style={styles.stickyHeader}>
+          <View style={styles.normalHeader}>
             <TouchableOpacity
               onPress={handleBackPress}
               style={styles.backButton}
@@ -757,7 +554,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             </TouchableOpacity>
 
             {!searchQuery && currentPath.length > 0 && (
-              <Text style={styles.breadcrumbs}>{currentPath.join(" > ")}</Text>
+              <Text
+                style={styles.breadcrumbs}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {currentPath.join(" > ")}
+              </Text>
             )}
           </View>
         ) : null}
@@ -790,155 +593,21 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
   return (
     <View style={styles.pickerSheetContent}>
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "list" && styles.activeTabButton,
-          ]}
-          onPress={() => setActiveTab("list")}
-        >
-          <Text
-            style={[
-              styles.tabButtonText,
-              activeTab === "list" && styles.activeTabButtonText,
-            ]}
-          >
-            List
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "map" && styles.activeTabButton,
-          ]}
-          onPress={() => setActiveTab("map")}
-        >
-          <Text
-            style={[
-              styles.tabButtonText,
-              activeTab === "map" && styles.activeTabButtonText,
-            ]}
-          >
-            Map
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.searchContainer}>
+        <Search
+          size={20}
+          color={COLORS.text.secondary}
+          style={styles.searchIcon}
+        />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search locations..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
-      {activeTab === "list" && (
-        <>
-          <View style={styles.searchContainer}>
-            <Search
-              size={20}
-              color={COLORS.text.secondary}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search locations..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-
-          {listOrLoadingIndicator()}
-        </>
-      )}
-
-      {activeTab === "map" && (
-        <View style={styles.mapContainer}>
-          <MapView
-            ref={mapViewRef}
-            style={styles.map}
-            zoomEnabled={true}
-            scrollEnabled={true}
-            rotateEnabled={true}
-            pitchEnabled={true}
-            toolbarEnabled={true}
-            initialRegion={
-              currentUserLocation
-                ? {
-                    latitude: currentUserLocation.coords.latitude,
-                    longitude: currentUserLocation.coords.longitude,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05,
-                  }
-                : undefined
-            }
-            onMapReady={() => setIsMapReady(true)}
-            onRegionChangeComplete={handleRegionChangeComplete}
-          >
-            {visibleSpots.map((spot: MappableSpot) => (
-              <Marker
-                key={spot.id}
-                coordinate={{
-                  latitude: spot.lat,
-                  longitude: spot.lng,
-                }}
-                title={spot.name}
-                onPress={() =>
-                  onSelectLocation(spot.name, spot.id, spot.lat, spot.lng)
-                }
-              />
-            ))}
-          </MapView>
-
-          <View style={styles.mapButtonsContainer} pointerEvents="box-none">
-            {currentUserLocation && (
-              <TouchableOpacity
-                style={styles.mapButton}
-                onPress={goToCurrentUserLocation}
-              >
-                <Crosshair size={24} color={COLORS.core.boardBlack} />
-              </TouchableOpacity>
-            )}
-
-            {/* Show "Go to selected spot" button if a spot is selected */}
-            {selectedLocation &&
-              visibleSpots.some((spot) => spot.name === selectedLocation) && (
-                <TouchableOpacity
-                  style={[styles.mapButton, styles.mapButtonWithLabel]}
-                  onPress={() => {
-                    const selectedSpot = visibleSpots.find(
-                      (spot) => spot.name === selectedLocation
-                    );
-                    if (selectedSpot && mapViewRef.current) {
-                      mapViewRef.current.animateToRegion(
-                        {
-                          latitude: selectedSpot.lat,
-                          longitude: selectedSpot.lng,
-                          latitudeDelta: 0.01,
-                          longitudeDelta: 0.01,
-                        },
-                        500
-                      );
-                    }
-                  }}
-                >
-                  <Text style={styles.mapButtonLabel}>Go to Selected Spot</Text>
-                </TouchableOpacity>
-              )}
-          </View>
-
-          {isLoading && (
-            <View style={styles.mapLoadingOverlay} pointerEvents="none">
-              <ActivityIndicator
-                size="large"
-                color={COLORS.core.midnightSurf}
-              />
-            </View>
-          )}
-
-          {visibleSpots.length === 0 && !isLoading && (
-            <View style={styles.mapEmptyOverlay} pointerEvents="none">
-              <Text style={styles.mapEmptyText}>
-                No spots in current view area. Try zooming out or panning the
-                map.
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
+      {listOrLoadingIndicator()}
     </View>
   );
 };
@@ -1014,6 +683,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 0,
     backgroundColor: "transparent",
+    borderWidth: 0,
   },
   backButtonText: {
     ...TYPOGRAPHY.body,
@@ -1023,75 +693,8 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.caption,
     color: COLORS.text.secondary,
     marginTop: 4,
-  },
-  mapContainer: {
-    flex: 1,
-    marginHorizontal: 0,
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: COLORS.neutral[200],
-    position: "relative",
-  },
-  map: {
-    flex: 1,
-  },
-  mapButtonsContainer: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 10,
-  },
-  mapButton: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    padding: 10,
-    borderRadius: 8,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  mapButtonWithLabel: {
-    width: "auto",
-    paddingHorizontal: 12,
-  },
-  mapButtonLabel: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.core.boardBlack,
-  },
-  mapLoadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  mapEmptyOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  mapEmptyText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.text.secondary,
-    textAlign: "center",
+    flexShrink: 1,
+    flexWrap: "nowrap",
   },
   emptyListText: {
     ...TYPOGRAPHY.body,
@@ -1122,31 +725,6 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text.primary,
   },
-  tabContainer: {
-    flexDirection: "row",
-    marginBottom: 12,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  activeTabButton: {
-    borderBottomColor: COLORS.core.boardBlack,
-    backgroundColor: "transparent",
-  },
-  tabButtonText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.text.secondary,
-  },
-  activeTabButtonText: {
-    ...TYPOGRAPHY.subtitle,
-    color: COLORS.core.boardBlack,
-  },
   fullScreenLoader: {
     flex: 1,
     justifyContent: "center",
@@ -1155,17 +733,12 @@ const styles = StyleSheet.create({
   listWithHeaderContainer: {
     flex: 1,
     position: "relative",
+    overflow: "visible",
   },
-  stickyHeader: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
+  normalHeader: {
     backgroundColor: "white",
-    zIndex: 2,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[200],
+    marginBottom: 8,
   },
 });
