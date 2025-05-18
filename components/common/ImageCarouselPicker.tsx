@@ -1,6 +1,5 @@
 import { COLORS } from "@/constants/Colors";
 import { TYPOGRAPHY } from "@/constants/Typography";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import {
   Dimensions,
@@ -44,12 +43,13 @@ export const ImageCarouselPicker: React.FC<ImageCarouselPickerProps> = ({
   const [currentIndex, setCurrentIndex] = useState(() => {
     if (currentOption) {
       const idx = options.findIndex((opt) => opt.id === currentOption.id);
-      return idx !== -1 ? idx : 0;
+      return idx !== -1 ? idx : Math.floor(options.length / 2);
     }
-    return 0;
+    return Math.floor(options.length / 2);
   });
   const flatListRef = useRef<FlatList<CarouselPickerOption>>(null);
 
+  // We can keep these functions for programmatic navigation if needed
   const handleNext = () => {
     if (currentIndex < options.length - 1) {
       const nextIndex = currentIndex + 1;
@@ -66,22 +66,30 @@ export const ImageCarouselPicker: React.FC<ImageCarouselPickerProps> = ({
     }
   };
 
-  const handleSelect = () => {
-    onSelectOption(options[currentIndex]);
-    onClose();
-  };
-
-  const renderItem = ({ item }: { item: CarouselPickerOption }) => (
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: CarouselPickerOption;
+    index: number;
+  }) => (
     <TouchableOpacity
       style={styles.itemContainer}
       onPress={() => {
-        onSelectOption(item);
-        onClose();
+        // First scroll to this item if it's not the current item
+        if (index !== currentIndex) {
+          setCurrentIndex(index);
+          flatListRef.current?.scrollToIndex({ index, animated: true });
+        } else {
+          // Only select if it's the current centered item
+          onSelectOption(item);
+          onClose();
+        }
       }}
       activeOpacity={0.8}
     >
       <ImageBackground
-        source={item.imageUri} // Use the imageUri directly for require()d assets
+        source={item.imageUri}
         style={styles.imageBackground}
         resizeMode="cover"
       >
@@ -116,69 +124,47 @@ export const ImageCarouselPicker: React.FC<ImageCarouselPickerProps> = ({
           <View style={styles.sheetContent}>
             <View style={styles.header}>
               <Text style={styles.title}>{title}</Text>
-              {/* Done button removed */}
             </View>
 
             <View style={styles.carouselContainer}>
               {options.length > 0 ? (
-                <>
-                  <TouchableOpacity
-                    onPress={handlePrev}
-                    style={[styles.arrowButton, styles.leftArrow]}
-                    disabled={currentIndex === 0}
-                  >
-                    <ChevronLeft
-                      size={32}
-                      color={
-                        currentIndex === 0
-                          ? COLORS.neutral[400] // More visible disabled color
-                          : COLORS.core.sunsetCoral // Coral for active
-                      }
-                    />
-                  </TouchableOpacity>
-                  <FlatList
-                    ref={flatListRef}
-                    data={options}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    onMomentumScrollEnd={(event) => {
-                      const index = Math.round(
-                        event.nativeEvent.contentOffset.x / (screenWidth * 0.8)
-                      );
-                      setCurrentIndex(index);
-                    }}
-                    initialScrollIndex={currentIndex}
-                    getItemLayout={(_data, index) => ({
-                      length: screenWidth * 0.8,
-                      offset: screenWidth * 0.8 * index,
-                      index,
-                    })}
-                    style={styles.flatList}
-                    contentContainerStyle={styles.flatListContent}
-                  />
-                  <TouchableOpacity
-                    onPress={handleNext}
-                    style={[styles.arrowButton, styles.rightArrow]}
-                    disabled={currentIndex === options.length - 1}
-                  >
-                    <ChevronRight
-                      size={32}
-                      color={
-                        currentIndex === options.length - 1
-                          ? COLORS.neutral[400] // More visible disabled color
-                          : COLORS.core.sunsetCoral // Coral for active
-                      }
-                    />
-                  </TouchableOpacity>
-                </>
+                <FlatList
+                  ref={flatListRef}
+                  data={options}
+                  renderItem={renderItem}
+                  keyExtractor={(item) => item.id}
+                  horizontal
+                  pagingEnabled={false}
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={(event) => {
+                    const index = Math.round(
+                      event.nativeEvent.contentOffset.x / (screenWidth * 0.7)
+                    );
+                    setCurrentIndex(index);
+                  }}
+                  initialScrollIndex={currentIndex}
+                  getItemLayout={(_data, index) => ({
+                    length: screenWidth * 0.7,
+                    offset:
+                      screenWidth * 0.7 * index -
+                      (screenWidth * 0.85 - screenWidth * 0.7) / 2,
+                    index,
+                  })}
+                  style={styles.flatList}
+                  contentContainerStyle={[
+                    styles.flatListContent,
+                    {
+                      paddingHorizontal:
+                        (screenWidth * 0.85 - screenWidth * 0.7) / 2,
+                    },
+                  ]}
+                  snapToInterval={screenWidth * 0.7}
+                  decelerationRate="fast"
+                />
               ) : (
                 <Text style={styles.noOptionsText}>No options available.</Text>
               )}
             </View>
-            {/* Removed the select button from here */}
           </View>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -224,21 +210,21 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center", // Center FlatList if it's smaller
+    justifyContent: "center",
+    position: "relative", // Ensure positioning context for arrows
   },
   flatList: {
-    width: screenWidth * 0.8, // Ensure FlatList takes up the designated space
-    alignSelf: "center",
+    width: screenWidth * 0.85, // Wider to show partial items
   },
   flatListContent: {
-    alignItems: "center", // Center items if fewer than can fill the view
+    alignItems: "center",
   },
   itemContainer: {
-    width: screenWidth * 0.8, // Each item takes 80% of screen width
-    height: "100%", // Take full height of the carousel area
+    width: screenWidth * 0.7, // Reduced from 0.8 to show more of adjacent items
+    height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 10, // Add some padding if needed
+    paddingHorizontal: 10,
   },
   imageBackground: {
     width: "100%",
@@ -271,9 +257,11 @@ const styles = StyleSheet.create({
   arrowButton: {
     position: "absolute",
     top: "50%",
-    transform: [{ translateY: -16 }], // Adjust based on arrow size
+    transform: [{ translateY: -16 }],
     padding: 10,
-    zIndex: 1, // Ensure arrows are above the FlatList
+    zIndex: 10, // Increase zIndex to ensure visibility
+    backgroundColor: "rgba(255,255,255,0.7)", // Semi-transparent background
+    borderRadius: 20, // Rounded button
   },
   leftArrow: {
     left: 5,

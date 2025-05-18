@@ -592,7 +592,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   };
 
   return (
-    <View style={styles.pickerSheetContent}>
+    <View style={styles.container}>
       <View style={styles.searchContainer}>
         <Search
           size={20}
@@ -601,9 +601,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search locations..."
+          placeholder="Search for a surf spot..."
           value={searchQuery}
           onChangeText={setSearchQuery}
+          returnKeyType="search"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholderTextColor={COLORS.text.secondary}
         />
       </View>
 
@@ -613,34 +617,28 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 };
 
 const styles = StyleSheet.create({
-  pickerSheetContent: {
-    width: "100%",
+  container: {
     flex: 1,
-    paddingBottom: 20,
-    flexDirection: "column",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    backgroundColor: "white",
-    marginHorizontal: 0,
-    marginTop: 0,
-    marginBottom: 16,
+    backgroundColor: COLORS.neutral[100],
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.core.seafoamGrey,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    height: 48, // Set a fixed height
   },
   searchIcon: {
-    marginRight: 6,
+    marginRight: 8,
   },
   searchInput: {
-    ...TYPOGRAPHY.body,
     flex: 1,
     color: COLORS.text.primary,
-    height: 36,
-    textAlignVertical: "center",
+    fontSize: 16,
+    fontFamily: "Inter-Regular",
+    height: 48, // Match container height
+    paddingVertical: 0, // Remove padding to align text properly
   },
   listStyle: {
     flex: 1,

@@ -11,7 +11,7 @@ import {
 import { TYPOGRAPHY } from "@/constants/Typography";
 import { CrowdOption, WaveHeightOption, WaveQualityOption } from "@/types";
 import { Droplet, TrendingUp, Users } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface ConditionsPickerProps {
@@ -34,6 +34,32 @@ export const ConditionsPicker: React.FC<ConditionsPickerProps> = ({
   const [showWaveHeightPicker, setShowWaveHeightPicker] = useState(false);
   const [showWaveQualityPicker, setShowWaveQualityPicker] = useState(false);
   const [showCrowdPicker, setShowCrowdPicker] = useState(false); // Added state for crowd picker
+
+  // Set default values if nothing is selected
+  useEffect(() => {
+    // Use middle options as defaults
+    if (!selectedWaveHeight) {
+      const middleHeightIndex = Math.floor(WAVE_HEIGHT_OPTIONS.length / 2);
+      onWaveHeightChange(WAVE_HEIGHT_OPTIONS[middleHeightIndex]);
+    }
+
+    if (!selectedWaveQuality) {
+      const middleQualityIndex = Math.floor(WAVE_QUALITY_OPTIONS.length / 2);
+      onWaveQualityChange(WAVE_QUALITY_OPTIONS[middleQualityIndex]);
+    }
+
+    if (!selectedCrowd) {
+      const middleCrowdIndex = Math.floor(CROWD_OPTIONS.length / 2);
+      onCrowdChange(CROWD_OPTIONS[middleCrowdIndex]);
+    }
+  }, [
+    selectedWaveHeight,
+    selectedWaveQuality,
+    selectedCrowd,
+    onWaveHeightChange,
+    onWaveQualityChange,
+    onCrowdChange,
+  ]);
 
   const mapWaveOptionsToCarousel = (
     options: (WaveHeightOption | WaveQualityOption)[]

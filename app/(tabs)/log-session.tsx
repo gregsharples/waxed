@@ -11,9 +11,9 @@ import DateTimePicker, {
 // import Slider from "@react-native-community/slider"; // No longer needed for wave height
 import { supabase } from "@/lib/supabase";
 import { Picker } from "@react-native-picker/picker";
-import { useRouter } from "expo-router";
-import { CalendarDays, Clock, MapPin, X } from "lucide-react-native";
-import React, { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { CalendarDays, Check, Clock, MapPin, X } from "lucide-react-native";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
   Modal,
@@ -25,7 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LogSessionScreen() {
@@ -64,6 +64,15 @@ export default function LogSessionScreen() {
   >([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  // Reset form when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      // Reset form to initial state when the screen comes into focus
+      resetForm();
+    }, [])
+  );
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || date;
@@ -145,6 +154,21 @@ export default function LogSessionScreen() {
     setMedia((prevMedia) => prevMedia.filter((item) => item.uri !== uri)); // Use functional update
   };
 
+  const resetForm = () => {
+    // Reset all form fields to their default values
+    setDate(new Date());
+    setDuration(1);
+    setSelectedLocation("");
+    setTempSelectedLocation("");
+    setTempSelectedLocationId(undefined);
+    setSelectedWaveHeight(undefined);
+    setSelectedWaveQuality(undefined);
+    setSelectedCrowd(undefined);
+    setNotes("");
+    setRating(0);
+    setMedia([]);
+  };
+
   const handleSubmit = async () => {
     if (!selectedLocation) {
       Alert.alert(
@@ -207,15 +231,17 @@ export default function LogSessionScreen() {
         throw error;
       }
 
-      Alert.alert("Success", "Session saved successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            // Reset form or navigate away
-            router.replace("/");
-          },
-        },
-      ]);
+      // Show success message briefly
+      setShowSuccessMessage(true);
+
+      // Reset the form
+      resetForm();
+
+      // Navigate to sessions tab after a short delay
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+        router.replace("/sessions");
+      }, 1500);
     } catch (error: any) {
       console.error("Error saving session:", error.message);
       Alert.alert("Error", `Failed to save session: ${error.message}`);
@@ -535,6 +561,20 @@ export default function LogSessionScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+
+      {/* Success message overlay */}
+      {showSuccessMessage && (
+        <Animated.View
+          entering={FadeInDown.duration(300)}
+          exiting={FadeOut.duration(300)}
+          style={styles.successOverlay}
+        >
+          <View style={styles.successContent}>
+            <Check size={40} color={COLORS.core.waxWhite} />
+            <Text style={styles.successText}>Session Saved!</Text>
+          </View>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -805,5 +845,27 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: 16,
     marginTop: 24,
+  },
+  successOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  successContent: {
+    backgroundColor: COLORS.core.sunsetCoral,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  successText: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.core.waxWhite,
+    marginTop: 16,
   },
 });
