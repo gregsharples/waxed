@@ -23,6 +23,7 @@
     "@react-navigation/native": "^7.1.6",
     "@rneui/themed": "4.0.0-rc.8",
     "@supabase/supabase-js": "^2.39.7",
+    "base64-arraybuffer": "^1.0.2",
     "expo": "~53.0.9",
     "expo-av": "~15.1.4",
     "expo-blur": "~14.1.4",
