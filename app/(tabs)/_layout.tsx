@@ -3,8 +3,8 @@ import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import {
   ChartBar as BarChart2,
-  BookOpen,
   Chrome as Home,
+  LineChart,
   CirclePlus as PlusCircle,
   User,
 } from "lucide-react-native";
@@ -57,6 +57,7 @@ const CustomLogButton = (props: BottomTabBarButtonProps) => {
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
+  // COMPLETELY REBUILT FROM SCRATCH - ONLY WITH TABS WE WANT
   return (
     <Tabs
       screenOptions={{
@@ -74,6 +75,7 @@ export default function TabLayout() {
         headerShown: false,
       }}
     >
+      {/* Home Tab */}
       <Tabs.Screen
         name="index"
         options={{
@@ -81,42 +83,46 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
+
+      {/* Progress Tab */}
       <Tabs.Screen
         name="progress"
         options={{
-          title: "Skills",
+          title: "Progress",
           tabBarIcon: ({ color, size }) => (
             <BarChart2 color={color} size={size} />
           ),
         }}
       />
+
+      {/* Log Session Tab (center floating button) */}
       <Tabs.Screen
         name="log-session"
         options={{
-          title: "Log", // Remains for accessibility
-          tabBarLabel: () => null, // Explicitly hide the label text
+          title: "Log",
+          tabBarLabel: () => null,
           tabBarIcon: ({ size }) => {
-            // Make the PlusCircle icon larger than standard tab icons
             const plusIconSize = size + 12;
             return (
-              <PlusCircle
-                color={COLORS.core.waxWhite} // Changed icon color for contrast
-                size={plusIconSize}
-              />
+              <PlusCircle color={COLORS.core.waxWhite} size={plusIconSize} />
             );
           },
           tabBarButton: (props) => <CustomLogButton {...props} />,
         }}
       />
+
+      {/* Sessions Tab */}
       <Tabs.Screen
-        name="learn"
+        name="sessions"
         options={{
-          title: "Learn",
+          title: "Sessions",
           tabBarIcon: ({ color, size }) => (
-            <BookOpen color={color} size={size} />
+            <LineChart color={color} size={size} />
           ),
         }}
       />
+
+      {/* Profile Tab */}
       <Tabs.Screen
         name="profile"
         options={{

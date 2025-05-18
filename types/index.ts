@@ -6,24 +6,34 @@ export interface User {
 
 export interface Session {
   id: string;
-  userId: string;
+  user_id: string;
   date: string; // ISO string
-  time: string; // HH:MM
-  duration: number; // in minutes
-  location: string; // or a more complex Location object
-  spotName?: string;
+  duration_minutes: number;
+  location: string;
+  location_id?: string;
   latitude?: number;
   longitude?: number;
+  wave_height?: string;
+  wave_quality?: string;
+  crowd?: string;
+  notes?: string;
+  rating?: number;
+  media?: string; // JSON string in the DB
+  created_at: string;
+  updated_at: string;
+
+  // Keep legacy fields for backward compatibility
+  userId?: string;
+  time?: string;
+  duration?: number;
   description?: string;
-  overallRating?: number; // e.g., 1-5 stars
+  overallRating?: number;
   waveCount?: number;
-  // Add other session-related fields
-  board?: string; // Name or ID of the board used
-  wetsuit?: string; // Thickness or type
-  media?: MediaItem[];
+  board?: string;
+  wetsuit?: string;
   waveHeight?: WaveHeightOption;
   waveQuality?: WaveQualityOption;
-  crowd?: CrowdOption;
+  spotName?: string;
 }
 
 export interface CrowdOption {

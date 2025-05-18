@@ -9,10 +9,13 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 // import Slider from "@react-native-community/slider"; // No longer needed for wave height
+import { supabase } from "@/lib/supabase";
 import { Picker } from "@react-native-picker/picker";
+import { useRouter } from "expo-router";
 import { CalendarDays, Clock, MapPin, X } from "lucide-react-native";
 import React, { useState } from "react";
 import {
+  Alert,
   Modal,
   Platform,
   ScrollView,
@@ -26,6 +29,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LogSessionScreen() {
+  const router = useRouter();
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false); // This will be reused for the inline picker on iOS
   const [showDatePickerSheet, setShowDatePickerSheet] = useState(false);
@@ -58,6 +62,8 @@ export default function LogSessionScreen() {
   const [media, setMedia] = useState<
     { uri: string; type: "image" | "video"; thumbnailUri?: string }[] // Added thumbnailUri
   >([]);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || date;
@@ -139,8 +145,83 @@ export default function LogSessionScreen() {
     setMedia((prevMedia) => prevMedia.filter((item) => item.uri !== uri)); // Use functional update
   };
 
-  const handleSubmit = () => {
-    // TODO: Implement session saving logic
+  const handleSubmit = async () => {
+    if (!selectedLocation) {
+      Alert.alert(
+        "Missing Information",
+        "Please select a location for your session."
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        Alert.alert("Authentication Error", "Please log in to save sessions.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Format session data
+      const sessionData = {
+        user_id: user.id,
+        date: date.toISOString(),
+        duration_minutes: Math.round(duration * 60), // Convert hours to minutes
+        location: selectedLocation,
+        location_id: tempSelectedLocationId,
+        latitude: null, // You might want to add these from the location picker
+        longitude: null,
+        wave_height: selectedWaveHeight?.id || null,
+        wave_quality: selectedWaveQuality?.id || null,
+        crowd: selectedCrowd?.id || null,
+        notes: notes,
+        rating: rating,
+        created_at: new Date().toISOString(),
+      };
+
+      // Save media URLs separately or as a JSON string
+      const mediaUrls = media.map((item) => ({
+        uri: item.uri,
+        type: item.type,
+        thumbnail_uri: item.thumbnailUri || null,
+      }));
+
+      // Insert session into Supabase
+      const { data, error } = await supabase
+        .from("sessions")
+        .insert([
+          {
+            ...sessionData,
+            media: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+          },
+        ])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      Alert.alert("Success", "Session saved successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Reset form or navigate away
+            router.replace("/");
+          },
+        },
+      ]);
+    } catch (error: any) {
+      console.error("Error saving session:", error.message);
+      Alert.alert("Error", `Failed to save session: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -439,9 +520,18 @@ export default function LogSessionScreen() {
         {/* Original Notes card removed */}
 
         {/* Delay for submit button needs to be adjusted */}
-        <Animated.View entering={FadeInDown.delay(600).duration(500)}>
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Save Session</Text>
+        <Animated.View
+          entering={FadeInDown.delay(600).duration(500)}
+          style={{ width: "100%" }}
+        >
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? "Saving..." : "Save Session"}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
@@ -605,6 +695,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 24,
     alignItems: "center",
+    width: "90%",
+    alignSelf: "center",
   },
   submitButtonText: {
     ...TYPOGRAPHY.buttonText,
@@ -708,5 +800,10 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 0,
     marginTop: -20, // Adjust this value to fine-tune vertical alignment
+  },
+  buttonWrapper: {
+    width: "100%",
+    paddingHorizontal: 16,
+    marginTop: 24,
   },
 });
