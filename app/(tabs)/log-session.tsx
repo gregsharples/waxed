@@ -11,6 +11,8 @@ import DateTimePicker, {
 // import Slider from "@react-native-community/slider"; // No longer needed for wave height
 import { supabase } from "@/lib/supabase";
 import { Picker } from "@react-native-picker/picker";
+import { decode } from "base64-arraybuffer"; // Import decode
+import * as FileSystem from "expo-file-system";
 import { useFocusEffect, useRouter } from "expo-router";
 import { CalendarDays, Check, Clock, MapPin, X } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
@@ -31,10 +33,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function LogSessionScreen() {
   const router = useRouter();
   const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false); // This will be reused for the inline picker on iOS
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDatePickerSheet, setShowDatePickerSheet] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date()); // For date & time picker sheet
-  const [duration, setDuration] = useState(1); // Duration in total hours
+  const [tempDate, setTempDate] = useState(new Date());
+  const [duration, setDuration] = useState(1);
   const [showDurationPickerSheet, setShowDurationPickerSheet] = useState(false);
   const [tempHours, setTempHours] = useState(Math.floor(duration));
   const [tempMinutes, setTempMinutes] = useState(
@@ -42,12 +44,11 @@ export default function LogSessionScreen() {
   );
   const [selectedLocation, setSelectedLocation] = useState("");
   const [showLocationPickerSheet, setShowLocationPickerSheet] = useState(false);
-  const [tempSelectedLocation, setTempSelectedLocation] = useState(""); // For location picker sheet
+  const [tempSelectedLocation, setTempSelectedLocation] = useState("");
   const [tempSelectedLocationId, setTempSelectedLocationId] = useState<
     string | undefined
-  >(undefined); // Store ID too
+  >(undefined);
 
-  // const [waveHeight, setWaveHeight] = useState(0.5); // Old wave height state
   const [selectedWaveHeight, setSelectedWaveHeight] = useState<
     WaveHeightOption | undefined
   >(undefined);
@@ -56,32 +57,28 @@ export default function LogSessionScreen() {
   >(undefined);
   const [selectedCrowd, setSelectedCrowd] = useState<CrowdOption | undefined>(
     undefined
-  ); // Added crowd state
+  );
   const [notes, setNotes] = useState("");
   const [rating, setRating] = useState(0);
   const [media, setMedia] = useState<
-    { uri: string; type: "image" | "video"; thumbnailUri?: string }[] // Added thumbnailUri
+    { uri: string; type: "image" | "video"; thumbnailUri?: string }[]
   >([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
-  // Reset form when screen is focused
   useFocusEffect(
     useCallback(() => {
-      // Reset form to initial state when the screen comes into focus
       resetForm();
     }, [])
   );
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === "ios"); // Keep for inline iOS date picker if needed elsewhere
-    setTempDate(currentDate); // Update tempDate for the sheet
+    setShowDatePicker(Platform.OS === "ios");
+    setTempDate(currentDate);
     if (Platform.OS !== "ios") {
-      // For Android, the picker closes itself
-      // setDate(currentDate); // Optionally update immediately on Android
-      // setShowDatePickerSheet(false); // Or close sheet after selection
+      // Android specific logic if any
     }
   };
 
@@ -98,19 +95,15 @@ export default function LogSessionScreen() {
 
   const handleConfirmLocation = () => {
     setSelectedLocation(tempSelectedLocation);
-    // Potentially save tempSelectedLocationId if needed for submission
     setShowLocationPickerSheet(false);
   };
 
-  // New handler for LocationPicker's onSelectLocation
   const handleTempLocationSelect = (
     locationName: string,
     locationId?: string
-    // lat?: number, // Not using lat/lng directly in LogSessionScreen state for now
-    // lng?: number
   ) => {
     setTempSelectedLocation(locationName);
-    setTempSelectedLocationId(locationId); // Store the ID if available
+    setTempSelectedLocationId(locationId);
   };
 
   const formatDuration = (totalHours: number) => {
@@ -125,13 +118,13 @@ export default function LogSessionScreen() {
       durationString += `${minutes} min`;
     }
     if (hours === 0 && minutes === 0) {
-      return "0 min"; // Or some default like "Set duration"
+      return "0 min";
     }
     return durationString;
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleString("en-US", {
+  const formatDate = (dateToFormat: Date) => {
+    return dateToFormat.toLocaleString("en-US", {
       weekday: "short",
       day: "numeric",
       month: "short",
@@ -145,17 +138,16 @@ export default function LogSessionScreen() {
   const handleAddMedia = (newMedia: {
     uri: string;
     type: "image" | "video";
-    thumbnailUri?: string; // Added thumbnailUri
+    thumbnailUri?: string;
   }) => {
-    setMedia((prevMedia) => [...prevMedia, newMedia]); // Use functional update
+    setMedia((prevMedia) => [...prevMedia, newMedia]);
   };
 
   const handleRemoveMedia = (uri: string) => {
-    setMedia((prevMedia) => prevMedia.filter((item) => item.uri !== uri)); // Use functional update
+    setMedia((prevMedia) => prevMedia.filter((item) => item.uri !== uri));
   };
 
   const resetForm = () => {
-    // Reset all form fields to their default values
     setDate(new Date());
     setDuration(1);
     setSelectedLocation("");
@@ -181,7 +173,6 @@ export default function LogSessionScreen() {
     setIsSubmitting(true);
 
     try {
-      // Get current user
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -192,11 +183,10 @@ export default function LogSessionScreen() {
         return;
       }
 
-      // Format session data
       const sessionData = {
         user_id: user.id,
         date: date.toISOString(),
-        duration_minutes: Math.round(duration * 60), // Convert hours to minutes
+        duration_minutes: Math.round(duration * 60),
         location: selectedLocation,
         location_id: tempSelectedLocationId,
         wave_height_id: selectedWaveHeight?.id || null,
@@ -207,35 +197,120 @@ export default function LogSessionScreen() {
         created_at: new Date().toISOString(),
       };
 
-      // Save media URLs separately or as a JSON string
-      const mediaUrls = media.map((item) => ({
-        uri: item.uri,
-        type: item.type,
-        thumbnail_uri: item.thumbnailUri || null,
-      }));
+      const uploadedMediaData = [];
+      if (media.length > 0) {
+        for (const mediaItem of media) {
+          try {
+            console.log(`Processing mediaItem: ${mediaItem.uri}`);
+            const localUri = mediaItem.uri;
 
-      // Insert session into Supabase
+            const fileInfo = await FileSystem.getInfoAsync(localUri);
+            if (!fileInfo.exists) {
+              console.warn(`File does not exist: ${localUri}`);
+              continue;
+            }
+            console.log(`File info for ${localUri}:`, fileInfo);
+
+            const originalFilename =
+              localUri.split("/").pop() || `media-${Date.now()}`;
+            const fileExtension = originalFilename
+              .split(".")
+              .pop()
+              ?.toLowerCase();
+            const baseFilename = originalFilename.substring(
+              0,
+              originalFilename.lastIndexOf(".")
+            );
+            const uniqueFilename = `${baseFilename}-${Date.now()}.${fileExtension}`;
+            const filePath = `${user.id}/${uniqueFilename}`;
+            console.log(`Generated filePath: ${filePath}`);
+
+            let contentType =
+              mediaItem.type === "image" ? "image/jpeg" : "video/mp4";
+            if (fileExtension === "png") contentType = "image/png";
+            if (fileExtension === "gif") contentType = "image/gif";
+            console.log(`Determined contentType: ${contentType}`);
+
+            console.log(`Reading file as base64: ${localUri}`);
+            const base64 = await FileSystem.readAsStringAsync(localUri, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            console.log(`Base64 string length: ${base64.length}`);
+
+            console.log(`Decoding base64 to ArrayBuffer...`);
+            const arrayBuffer = decode(base64);
+            console.log(`ArrayBuffer created. Size: ${arrayBuffer.byteLength}`);
+
+            console.log(
+              `Attempting to upload ${filePath} to Supabase Storage...`
+            );
+            const { data: uploadData, error: uploadError } =
+              await supabase.storage
+                .from("session-media")
+                .upload(filePath, arrayBuffer, {
+                  contentType,
+                  upsert: false,
+                });
+
+            if (uploadError) {
+              console.error(`UPLOAD ERROR for ${filePath}:`, uploadError);
+              continue;
+            }
+
+            console.log(`Upload successful for ${filePath}. Data:`, uploadData);
+
+            const uploadedPath = uploadData?.path || filePath;
+            const { data: publicUrlResult } = supabase.storage
+              .from("session-media")
+              .getPublicUrl(uploadedPath);
+
+            if (publicUrlResult && publicUrlResult.publicUrl) {
+              console.log(
+                `Public URL for ${uploadedPath}: ${publicUrlResult.publicUrl}`
+              );
+              uploadedMediaData.push({
+                url: publicUrlResult.publicUrl,
+                type: mediaItem.type,
+                originalFilename: originalFilename,
+              });
+            } else {
+              console.warn(
+                `No publicUrl or data returned for ${uploadedPath}.`
+              );
+            }
+          } catch (e: any) {
+            console.error(
+              `EXCEPTION during processing media item ${mediaItem.uri}:`,
+              e.message,
+              e.stack
+            );
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from("sessions")
         .insert([
           {
             ...sessionData,
-            media: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+            media:
+              uploadedMediaData.length > 0
+                ? JSON.stringify(uploadedMediaData)
+                : null,
           },
         ])
         .select();
 
       if (error) {
+        console.error(
+          "Error inserting session after media upload:",
+          error.message
+        );
         throw error;
       }
 
-      // Show success message briefly
       setShowSuccessMessage(true);
-
-      // Reset the form
       resetForm();
-
-      // Navigate to sessions tab after a short delay
       setTimeout(() => {
         setShowSuccessMessage(false);
         router.replace("/sessions");
@@ -267,7 +342,7 @@ export default function LogSessionScreen() {
               <TouchableOpacity
                 style={styles.dateTimeItem}
                 onPress={() => {
-                  setTempDate(date); // Initialize tempDate with current date
+                  setTempDate(date);
                   setShowDatePickerSheet(true);
                 }}
               >
@@ -295,11 +370,10 @@ export default function LogSessionScreen() {
                   {formatDuration(duration)}
                 </Text>
               </TouchableOpacity>
-              {/* Location Picker Trigger */}
               <TouchableOpacity
                 style={styles.dateTimeItem}
                 onPress={() => {
-                  setTempSelectedLocation(selectedLocation); // Initialize temp location
+                  setTempSelectedLocation(selectedLocation);
                   setShowLocationPickerSheet(true);
                 }}
               >
@@ -313,15 +387,6 @@ export default function LogSessionScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-            {/* {showDatePicker && (
-              <DateTimePicker
-                value={tempDate} // Use tempDate for the inline picker as well if it's for the sheet
-                mode="datetime" // Changed to datetime
-                display="default"
-                onChange={onDateChange}
-              />
-            )} */}
-            {/* Date Picker Modal/Sheet */}
             <Modal
               animationType="slide"
               transparent={true}
@@ -332,25 +397,21 @@ export default function LogSessionScreen() {
                 <View style={styles.sheetContent}>
                   <Text style={styles.sheetTitle}>Select Date</Text>
                   {Platform.OS === "android" && (
-                    // Android DateTimePicker is a dialog, so we show it when sheet is visible
-                    // and it will overlay. For a more integrated look, custom component needed.
-                    // This re-uses the existing logic for Android.
                     <DateTimePicker
                       value={tempDate}
-                      mode="datetime" // Changed to datetime
+                      mode="datetime"
                       display="default"
                       onChange={(event, selectedDate) => {
                         onDateChange(event, selectedDate);
-                        // For Android, picker closes on selection, so we might auto-confirm or require "Done"
-                        if (selectedDate) setTempDate(selectedDate); // Update tempDate
+                        if (selectedDate) setTempDate(selectedDate);
                       }}
                     />
                   )}
                   {Platform.OS === "ios" && (
                     <DateTimePicker
                       value={tempDate}
-                      mode="datetime" // Changed to datetime
-                      display="spinner" // Spinner is better for sheets on iOS
+                      mode="datetime"
+                      display="spinner"
                       onChange={onDateChange}
                       style={styles.iosPickerStyle}
                     />
@@ -367,7 +428,6 @@ export default function LogSessionScreen() {
                 </View>
               </View>
             </Modal>
-            {/* Duration Picker Modal/Sheet */}
             <Modal
               animationType="slide"
               transparent={true}
@@ -379,22 +439,20 @@ export default function LogSessionScreen() {
                   <Text style={styles.sheetTitle}>Select Duration</Text>
                   {Platform.OS === "ios" ? (
                     <DateTimePicker
-                      value={new Date(0, 0, 0, tempHours, tempMinutes, 0)} // Date representing duration
+                      value={new Date(0, 0, 0, tempHours, tempMinutes, 0)}
                       mode="countdown"
                       display="spinner"
-                      minuteInterval={5} // Changed to 5 minutes
-                      textColor={COLORS.core.boardBlack} // Added textColor for iOS
+                      minuteInterval={5}
+                      textColor={COLORS.core.boardBlack}
                       onChange={(event, newDate?: Date) => {
                         if (newDate) {
-                          // For countdown, newDate's time part gives the duration
                           setTempHours(newDate.getHours());
                           setTempMinutes(newDate.getMinutes());
                         }
                       }}
-                      style={styles.iosPickerStyle} // Reuse existing style for width/height
+                      style={styles.iosPickerStyle}
                     />
                   ) : (
-                    // Android uses the dual Picker setup
                     <View style={styles.durationPickerRow}>
                       <View style={styles.pickerContainer}>
                         <Text style={styles.pickerLabel}>Hours</Text>
@@ -406,13 +464,9 @@ export default function LogSessionScreen() {
                             setTempHours(itemValue)
                           }
                         >
-                          {[...Array(6).keys()].map(
-                            (
-                              h // 0-5 hours
-                            ) => (
-                              <Picker.Item key={h} label={`${h}`} value={h} />
-                            )
-                          )}
+                          {[...Array(6).keys()].map((h) => (
+                            <Picker.Item key={h} label={`${h}`} value={h} />
+                          ))}
                         </Picker>
                       </View>
                       <View style={styles.pickerContainer}>
@@ -425,13 +479,9 @@ export default function LogSessionScreen() {
                             setTempMinutes(itemValue)
                           }
                         >
-                          {[0, 15, 30, 45].map(
-                            (
-                              m // 0, 15, 30, 45 minutes
-                            ) => (
-                              <Picker.Item key={m} label={`${m}`} value={m} />
-                            )
-                          )}
+                          {[0, 15, 30, 45].map((m) => (
+                            <Picker.Item key={m} label={`${m}`} value={m} />
+                          ))}
                         </Picker>
                       </View>
                     </View>
@@ -448,7 +498,6 @@ export default function LogSessionScreen() {
                 </View>
               </View>
             </Modal>
-            {/* Location Picker Modal/Sheet */}
             <Modal
               animationType="slide"
               transparent={true}
@@ -470,7 +519,7 @@ export default function LogSessionScreen() {
                   <View style={styles.pickerWrapper}>
                     <LocationPicker
                       selectedLocation={tempSelectedLocation}
-                      onSelectLocation={handleTempLocationSelect} // Use the new handler
+                      onSelectLocation={handleTempLocationSelect}
                     />
                   </View>
                   {tempSelectedLocation ? (
@@ -493,10 +542,6 @@ export default function LogSessionScreen() {
           </View>
         </Animated.View>
 
-        {/* LocationPicker component is now inside a modal/sheet triggered from Session Details card */}
-        {/* The old "Where did you surf?" card has been removed */}
-
-        {/* Conditions Picker */}
         <Animated.View entering={FadeInDown.delay(200).duration(500)}>
           <ConditionsPicker
             selectedWaveHeight={selectedWaveHeight}
@@ -511,12 +556,11 @@ export default function LogSessionScreen() {
         <Animated.View entering={FadeInDown.delay(400).duration(500)}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              {/* Star icon removed */}
               <Text style={styles.cardTitleNoIcon}>Session Review</Text>
             </View>
             <RatingPicker rating={rating} onRatingChange={setRating} />
             <TextInput
-              style={[styles.notesInput, { marginTop: 16 }]} // Added marginTop to notesInput
+              style={[styles.notesInput, { marginTop: 16 }]}
               multiline
               numberOfLines={4}
               placeholder="Add any notes about your session..."
@@ -527,7 +571,6 @@ export default function LogSessionScreen() {
           </View>
         </Animated.View>
 
-        {/* The original Notes card is removed, so the delay for Add Photos & Videos needs to be adjusted */}
         <Animated.View entering={FadeInDown.delay(500).duration(500)}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -541,9 +584,6 @@ export default function LogSessionScreen() {
           </View>
         </Animated.View>
 
-        {/* Original Notes card removed */}
-
-        {/* Delay for submit button needs to be adjusted */}
         <Animated.View
           entering={FadeInDown.delay(600).duration(500)}
           style={{ width: "100%" }}
@@ -560,7 +600,6 @@ export default function LogSessionScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* Success message overlay */}
       {showSuccessMessage && (
         <Animated.View
           entering={FadeInDown.duration(300)}
@@ -583,7 +622,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    paddingBottom: 140, // Adjusted padding
+    paddingBottom: 140,
   },
   header: {
     paddingHorizontal: 16,
@@ -609,50 +648,41 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8, // Reduced marginBottom from 16 to 8
+    marginBottom: 8,
   },
   customCardHeader: {
-    // New style for the "Time and Duration" header
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4, // Further reduced margin
+    marginBottom: 4,
   },
   cardTitle: {
-    ...TYPOGRAPHY.subtitle, // Changed from h3 to subtitle
-    color: COLORS.text.primary,
-    marginLeft: 8, // For headers with icons
-  },
-  cardTitleNoIcon: {
-    // New style for card titles without an icon
     ...TYPOGRAPHY.subtitle,
     color: COLORS.text.primary,
-    // No marginLeft as there's no icon
+    marginLeft: 8,
+  },
+  cardTitleNoIcon: {
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text.primary,
   },
   customCardTitle: {
-    // New style for the "Time and Duration" title (no icon, so no marginLeft)
     ...TYPOGRAPHY.subtitle,
     color: COLORS.text.primary,
   },
   dateTimeRow: {
-    flexDirection: "column", // Changed to column
-    alignItems: "stretch", // Stretch items to fill width
-    marginTop: 4, // Reduced top margin
-    paddingTop: 8, // Keep top padding
-    paddingBottom: 4, // Reduce bottom padding to make space below duration picker smaller
-    paddingHorizontal: 0, // No horizontal padding needed if items stretch
+    flexDirection: "column",
+    alignItems: "stretch",
+    marginTop: 4,
+    paddingTop: 8,
+    paddingBottom: 4,
+    paddingHorizontal: 0,
     borderRadius: 8,
-    // borderWidth: 1, // Removed border
-    // borderColor: COLORS.neutral[200], // Removed border
   },
   dateTimeItem: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between", // To push icon and text apart if desired, or center
-    paddingVertical: 10, // Add some padding to each item
-    paddingHorizontal: 16, // Add horizontal padding to each item
-    // backgroundColor: COLORS.neutral[100], // Example if each item needs a background
-    // borderRadius: 8, // Example if each item needs a border radius
-    // marginBottom: 8, // Add margin if items are too close
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   iconStyle: {
     marginRight: 6,
@@ -661,24 +691,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text.primary,
   },
-  // Removed datePickerButton, dateText, durationContainer, label, value, slider styles as they are being refactored
-  // label: { // Kept for other cards, ensure it's not removed if used elsewhere
-  //   ...TYPOGRAPHY.subtitle,
-  //   color: COLORS.text.secondary,
-  //   marginBottom: 8,
-  // },
-  // value: { // Kept for other cards
-  //   ...TYPOGRAPHY.body,
-  //   color: COLORS.text.primary,
-  //   textAlign: "center",
-  //   marginBottom: 8,
-  // },
-  // slider: { // Kept for other cards
-  //   width: "100%",
-  //   height: 40,
-  // },
   label: {
-    // Copied from original for other cards that might use it
     ...TYPOGRAPHY.subtitle,
     color: COLORS.text.secondary,
     marginBottom: 8,
@@ -727,7 +740,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   submitButton: {
-    backgroundColor: COLORS.core.sunsetCoral, // Changed to coral color
+    backgroundColor: COLORS.core.sunsetCoral,
     borderRadius: 16,
     paddingVertical: 16,
     marginHorizontal: 16,
@@ -746,18 +759,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   sheetContent: {
-    // General sheet content style
     backgroundColor: "white",
     paddingHorizontal: 20,
-    paddingBottom: 20, // Bottom padding for button
-    paddingTop: 20, // Reduced top padding, title will have its own margin
+    paddingBottom: 20,
+    paddingTop: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     alignItems: "center",
-    // height: "auto", // Let content define height for date/duration pickers
   },
   locationSheetContent: {
-    // Specific style for location picker sheet
     backgroundColor: "white",
     paddingHorizontal: 20,
     paddingBottom: 20,
@@ -765,20 +775,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     height: "90%",
-    flexDirection: "column", // To arrange items vertically
-    justifyContent: "space-between", // Push button to bottom
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   pickerWrapper: {
-    flex: 1, // Allows LocationPicker to take available space
-    width: "100%", // Ensure LocationPicker spans width
-    marginBottom: 10, // Space before current selection text or button
+    flex: 1,
+    width: "100%",
+    marginBottom: 10,
   },
   currentSelectionText: {
-    ...TYPOGRAPHY.body, // Made more prominent
-    color: COLORS.core.boardBlack, // Changed to boardBlack
+    ...TYPOGRAPHY.body,
+    color: COLORS.core.boardBlack,
     textAlign: "center",
     marginBottom: 10,
-    fontWeight: "500", // Added some weight
+    fontWeight: "500",
   },
   sheetTitle: {
     ...TYPOGRAPHY.h3,
@@ -786,16 +796,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   iosPickerStyle: {
-    width: "100%", // Ensure picker takes full width
-    height: 200, // Adjust height as needed
+    width: "100%",
+    height: 200,
   },
   sheetButton: {
-    backgroundColor: COLORS.core.boardBlack, // Changed to boardBlack
+    backgroundColor: COLORS.core.boardBlack,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 30,
     marginTop: 20,
-    width: "100%", // Make button full width
+    width: "100%",
     alignItems: "center",
   },
   sheetButtonText: {
@@ -810,7 +820,7 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     flex: 1,
-    alignItems: "center", // Center label above picker
+    alignItems: "center",
   },
   pickerLabel: {
     ...TYPOGRAPHY.subtitle,
@@ -818,14 +828,12 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   pickerStyle: {
-    height: Platform.OS === "ios" ? 150 : 50, // iOS needs explicit height for wheel
-    width: Platform.OS === "ios" ? "auto" : 120, // Android can use fixed width
+    height: Platform.OS === "ios" ? 150 : 50,
+    width: Platform.OS === "ios" ? "auto" : 120,
   },
   pickerItemStyle: {
-    // For iOS, to style the items in the wheel picker
-    height: Platform.OS === "ios" ? 150 : undefined, // Ensure items are tall enough for wheel
+    height: Platform.OS === "ios" ? 150 : undefined,
     fontSize: Platform.OS === "ios" ? TYPOGRAPHY.body.fontSize : undefined,
-    // color: Platform.OS === "ios" ? "#000000" : undefined, // Color now applied directly to Picker.Item for iOS
   },
   sheetHeader: {
     flexDirection: "row",
@@ -837,7 +845,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 0,
-    marginTop: -20, // Adjust this value to fine-tune vertical alignment
+    marginTop: -20,
   },
   buttonWrapper: {
     width: "100%",
