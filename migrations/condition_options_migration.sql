@@ -1,0 +1,2 @@
+-- This migration has been consolidated into supabase/migrations/20240801000000_remove_coords_create_seed_tables.sql
+-- Leaving this file empty to prevent conflicts.

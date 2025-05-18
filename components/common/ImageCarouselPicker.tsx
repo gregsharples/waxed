@@ -18,7 +18,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 export interface CarouselPickerOption {
   id: string;
   label: string;
-  imageUri: number; // Changed to number to accept require() result
+  imageUri: number; // Reverted to number to accept require() result
   description?: string;
   metric?: string;
 }

@@ -37,11 +37,11 @@ export interface Session {
 }
 
 export interface CrowdOption {
-  id: string;
+  id: number; // Changed to number
   label: string;
-  iconName: string; // To store the name of the lucide icon (if used for a button UI)
-  imageUri: number; // Changed to number for require() result
-  description?: string; // Added for crowd descriptions
+  icon_name?: string; // Changed to icon_name and optional
+  image_path: string; // Changed from imageUri to image_path, type string
+  description?: string;
 }
 
 export interface MediaItem {
@@ -90,16 +90,16 @@ export interface LocationSuggestion {
 }
 
 export interface WaveHeightOption {
-  id: string;
+  id: number; // Changed to number
   label: string; // e.g., "Ankle Biters"
   metric: string; // e.g., "< 0.3m"
-  imageUri: number; // Changed to number for require() result
+  image_path: string; // Changed from imageUri to image_path, type string
   description?: string; // Optional detailed description
 }
 
 export interface WaveQualityOption {
-  id: string;
+  id: number; // Changed to number
   label: string; // e.g., "Blown Out"
   description: string; // e.g., "Total mess — strong wind, no shape"
-  imageUri: number; // Changed to number for require() result
+  image_path: string; // Changed from imageUri to image_path, type string
 }
