@@ -199,11 +199,9 @@ export default function LogSessionScreen() {
         duration_minutes: Math.round(duration * 60), // Convert hours to minutes
         location: selectedLocation,
         location_id: tempSelectedLocationId,
-        latitude: null, // You might want to add these from the location picker
-        longitude: null,
-        wave_height: selectedWaveHeight?.id || null,
-        wave_quality: selectedWaveQuality?.id || null,
-        crowd: selectedCrowd?.id || null,
+        wave_height_id: selectedWaveHeight?.id || null,
+        wave_quality_id: selectedWaveQuality?.id || null,
+        crowd_id: selectedCrowd?.id || null,
         notes: notes,
         rating: rating,
         created_at: new Date().toISOString(),
